@@ -4,12 +4,12 @@
 # Functions to create nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   May 13, 2021
+# Date:   May 17, 2021
 
 from typing import List, Dict, Tuple
 import numpy as np
+import scipy
 from numpy.random import uniform
-from joblib import Parallel, delayed
 from shapely.geometry import LineString, Point
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -158,7 +158,7 @@ def create_NWN(
         NWN.add_node(
             i, line=create_line(NWN.graph["wire_length"], xmax=NWN.graph["width"], ymax=NWN.graph["width"], rng=rng), electrode=False
         )
-        NWN.nodes[i]["midpoint"] = np.array(NWN.nodes[i]["line"].interpolate(0.5, normalized=True))
+        NWN.nodes[i]["midpoint"] = np.array(NWN.nodes[i]["line"].centroid)
         
     # Find intersects
     intersect_dict = find_intersects(NWN.nodes.data("line"))
@@ -217,7 +217,7 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
     for i in range(new_wire_num):
         NWN.add_node(
             start_ind + i, line=lines[i], 
-            midpoint = np.array(lines[i].interpolate(0.5, normalized=True)), 
+            midpoint = np.array(lines[i].centroid), 
             electrode = electrodes[i],
         )
 
@@ -226,52 +226,75 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
 
         # Find intersects
         intersect_dict = find_line_intersects(start_ind + i, NWN.nodes.data("line"))
-        for ind in intersect_dict.keys():
-            resistance = NWN.graph["junction_resistance"]
-            if ind[0] in NWN.graph["electrode_list"] or ind[1] in NWN.graph["electrode_list"]:
-                resistance = 0.0
 
-            NWN.add_edge(ind, resistance=resistance)
+        # Custom contact junction resistances
+        # for ind in intersect_dict.keys():
+        #     resistance = NWN.graph["junction_resistance"]
+        #     if ind[0] in NWN.graph["electrode_list"] or ind[1] in NWN.graph["electrode_list"]:
+        #         resistance = 0.0
+        #     NWN.add_edge(*ind, resistance=resistance)
         
-        
-        # NWN.add_edges_from(
-        #     intersect_dict.keys(), 
-        #     resistance = [NWN.graph["junction_resistance"] * electrodes[i] for i in range(new_wire_num)]
-        # )
+        # Uniform junction resistances
+        NWN.add_edges_from(
+            intersect_dict.keys(), 
+            resistance = NWN.graph["junction_resistance"]
+        )
         NWN.graph["loc"].update(intersect_dict)
 
     # Update wire density
     NWN.graph["wire_density"] = (NWN.graph["wire_num"] - NWN.graph["electrodes"]) / NWN.graph["size"]
 
+def conductance_matrix(NWN: nx.Graph, drain_node: int):
+    """
+    Create the (sparse) conductance matrix for a given NWN.
 
-
+    """
+    wire_num = NWN.graph["wire_num"]
+    G = scipy.sparse.dok_matrix((wire_num, wire_num))
     
+    for i in range(wire_num):
+        for j in range(wire_num):
+            if i == j:
+                if i == drain_node:
+                    G[i, j] = 1.0
+                else:
+                    G[i, j] = sum(
+                        [1 / NWN[edge[0]][edge[1]]["resistance"] for edge in NWN.edges(i) if NWN[edge[0]][edge[1]]["resistance"] != 0]
+                    )
 
+                    # Ground every node with a large resistor: 1e-8 -> 100 MΩ
+                    G[i, j] += 1e-8
+            else:
+                if i != drain_node:
+                    edge_data = NWN.get_edge_data(i, j)
+                    if edge_data:
+                        G[i, j] = -1 / edge_data["resistance"]
+    return G
+
+def solve_network(NWN: nx.Graph, source_node: int, drain_node: int, voltage: float):
+    """
+    Solve for the voltages of each wire in a given NWN.
+    The source node will be at the specified voltage and
+    the drain node will be grounded.
     
+    """
+    wire_num = NWN.graph["wire_num"]
+    G = conductance_matrix(NWN, source_node, drain_node)
 
-  
+    B = scipy.sparse.dok_matrix((wire_num, 1))
+    B[source_node, 0] = -1
 
+    C = -B.T
 
-# Functions don't work yet
+    D = None
 
-def _intersect_func(line1, line2):
-    if line1.intersects(line2):
-        return line1.intersection(line2)
-    else:
-        return Point()
+    A = scipy.sparse.bmat([[G, B], [C, D]])
+    z = scipy.sparse.dok_matrix((wire_num + 1, 1))
+    z[-1] = voltage
 
-def find_intersects_parallel(lines):
-    with Parallel(n_jobs=-1) as parallel:
-        result = parallel(
-            [delayed(_intersect_func)(lines[i], lines[j]) for i, j in zip(*np.triu_indices(n=len(lines), k=1))]
-        )
-
-    # out = {pair : loc for pair, loc in filter(None, result)}
-    out = {(i, j) : result[ind] for ind, (i, j) in enumerate(zip(*np.triu_indices(n=len(lines), k=1))) if not result[ind].is_empty}
-    return out
-
-
-
+    # SparseEfficiencyWarning: spsolve requires A be CSC or CSR matrix format
+    x = scipy.sparse.linalg.spsolve(A.tocsr(), z)
+    return x
 
 # Testing code
 if __name__ == "__main__":
