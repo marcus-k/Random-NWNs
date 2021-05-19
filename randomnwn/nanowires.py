@@ -17,19 +17,19 @@ from .line_functions import *
 
 
 def create_NWN(
-        wire_length: float = 7.0, 
-        width: float = 50.0, 
-        density: float = 0.3, 
-        seed: int = None,
-        resistance: float = 10
-    ) -> nx.Graph:
+    wire_length: float = 7.0, 
+    width: float = 50.0, 
+    density: float = 0.3, 
+    seed: int = None,
+    resistance: float = 10
+) -> nx.Graph:
     """
-    Create a nanowire network stored in a networkx graph. The wires are 
-    the graph's vertices, while the wire junctions are represented by the edges.
+    Create a nanowire network stored in a networkx graph. The wires are the 
+    graph's vertices, while the wire junctions are represented by the edges.
 
-    The density might not be attainable with the given size as there can
-    only be a integer number of wires. Thus, the closest density to an 
-    integer number of wires is used.
+    The density might not be attainable with the given size as there can only 
+    be a integer number of wires. Thus, the closest density to an integer 
+    number of wires is used.
 
     Wire length and grid width are in micrometers. Resistance is in ohms.
 
@@ -87,7 +87,7 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
             continue
 
         # Get location of the junction for a wire
-        junction_locs = [NWN.graph["loc"][edge] for edge in junctions]
+        junction_locs = [NWN.graph["loc"][tuple(sorted(edge))] for edge in junctions]
 
         # Add junctions as part of the LineString that makes up the wire
         NWN.graph["lines"][i] = add_points_to_line(NWN.graph["lines"][i], junction_locs)

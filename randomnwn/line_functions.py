@@ -14,9 +14,8 @@ from shapely.geometry import LineString, Point
 
 def create_line(length=1, xmin=0, xmax=1, ymin=0, ymax=1, rng=None) -> LineString:
     """
-    Generate random lines with random orientations with midpoints 
-    ranging from area from ``xmin`` to ``xmax`` and from ``ymin``
-    to ``ymax``.
+    Generate random lines with random orientations with midpoints ranging from 
+    area from ``xmin`` to ``xmax`` and from ``ymin`` to ``ymax``.
 
     Parameters
     ----------
@@ -36,10 +35,9 @@ def create_line(length=1, xmin=0, xmax=1, ymin=0, ymax=1, rng=None) -> LineStrin
         Minimum y coordinate midpoint.
 
     rng : Generator
-        Generator object usually created from ``default_rng``
-        from ``numpy.random``. A seeded generator can be passed
-        for consistent random numbers. If None, uses the default
-        NumPy random functions.
+        Generator object usually created from ``default_rng`` from 
+        ``numpy.random``. A seeded generator can be passed for consistent 
+        random numbers. If None, uses the default NumPy random functions.
 
     Returns
     -------
@@ -63,8 +61,7 @@ def create_line(length=1, xmin=0, xmax=1, ymin=0, ymax=1, rng=None) -> LineStrin
 
 def find_intersects(lines: list) -> Dict[Tuple[int, int], Point]:
     """
-    Given a list of LineStrings, finds all the lines that intersect 
-    and where.
+    Given a list of LineStrings, finds all the lines that intersect and where.
 
     Parameters
     ----------
@@ -72,15 +69,13 @@ def find_intersects(lines: list) -> Dict[Tuple[int, int], Point]:
         List of the LineStrings to find the intersections of.
 
     loc : bool
-        Whether or not to return the intersect locations.
-        Defaults to false.
+        Whether or not to return the intersect locations. Defaults to false.
 
     Returns
     -------
     out : dict
-        Dictionary where the key is a tuple of the pair of
-        intersecting lines and the value is the intersection
-        locations.
+        Dictionary where the key is a tuple of the pair of intersecting lines 
+        and the value is the intersection locations.
 
     """
     out = {}
@@ -118,8 +113,7 @@ def find_line_intersects(ind: int, lines: List[LineString]) -> Dict[Tuple[int, i
 
 def add_points_to_line(line: LineString, points: List[Point]):
     """
-    Given a list of points and a line, add the 
-    projected points to the line.
+    Given a list of points and a line, add the projected points to the line.
 
     See more: https://stackoverflow.com/questions/34754777/shapely-split-linestrings-at-intersections-with-other-linestrings
 
