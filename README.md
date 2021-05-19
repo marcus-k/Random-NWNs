@@ -15,6 +15,6 @@ from the local project path. It can then be used by importing it as
 
 # Uninstallation
 
-To uninstall the package, navigate to the base folder and run
+To uninstall the package, use
 
 ``pip uninstall Random-NWNs``
