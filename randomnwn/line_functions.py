@@ -111,11 +111,12 @@ def find_line_intersects(ind: int, lines: List[LineString]) -> Dict[Tuple[int, i
     return out
 
 
-def add_points_to_line(line: LineString, points: List[Point]):
+def add_points_to_line(line: LineString, points: List[Point]) -> LineString:
     """
     Given a list of points and a line, add the projected points to the line.
 
-    See more: https://stackoverflow.com/questions/34754777/shapely-split-linestrings-at-intersections-with-other-linestrings
+    See general form at: 
+    https://stackoverflow.com/questions/34754777/shapely-split-linestrings-at-intersections-with-other-linestrings
 
     """
      # First coords of line (start + end)

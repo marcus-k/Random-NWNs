@@ -7,6 +7,7 @@
 # Date:   May 17, 2021
 
 from typing import List, Dict, Tuple
+from networkx.classes import graph
 import numpy as np
 import scipy
 from shapely.geometry import LineString, Point
@@ -58,11 +59,14 @@ def create_NWN(
     # Add the wires as nodes to the graph
     for i in range(NWN.graph["wire_num"]):
         NWN.graph["lines"].append(create_line(NWN.graph["wire_length"], xmax=NWN.graph["width"], ymax=NWN.graph["width"], rng=rng))
-        NWN.add_node(i, electrode=False)
+        NWN.add_node((i,), electrode=False)
         
     # Find intersects
     intersect_dict = find_intersects(NWN.graph["lines"])
-    NWN.add_edges_from(intersect_dict.keys(), resistance=resistance)
+    NWN.add_edges_from(
+        [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
+        resistance = resistance
+    )
     NWN.graph["loc"] = intersect_dict
     
     # Find junction density
@@ -87,10 +91,37 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
             continue
 
         # Get location of the junction for a wire
-        junction_locs = [NWN.graph["loc"][tuple(sorted(edge))] for edge in junctions]
+        junction_locs = {
+            edge: NWN.graph["loc"][tuple(sorted(edge))] for edge in junctions
+        }
 
         # Add junctions as part of the LineString that makes up the wire
-        NWN.graph["lines"][i] = add_points_to_line(NWN.graph["lines"][i], junction_locs)
+        NWN.graph["lines"][i] = add_points_to_line(NWN.graph["lines"][i], junction_locs.values())
+
+        # If wire is electrode, move on to the next wire
+        if NWN.nodes[i]["electrode"]:
+            continue
+
+        # Split up nodes into the junctions
+        for j, loc in enumerate(junction_locs):
+            NWN.add_node((i, j), loc=loc)
+
+            # Add edge between the new node to other wires
+            for edge, point in junction_locs.items():
+                if np.allclose(point, loc):
+                    ind = edge.index(i)
+                    NWN.add_edge((i, j), ~ind)
+                    break
+        NWN.remove_node(i)
+
+        # TODO: change nodes to be tuples (i,) for JDA
+
+
+
+
+        
+    
+
 
 
 
@@ -117,7 +148,7 @@ def plot_NWN(NWN, intersections=True, rnd_color=False):
             ax.plot(*np.array(NWN.graph["lines"][i]).T)
     else:
         for i in range(NWN.graph["wire_num"]):
-            if NWN.nodes[i]["electrode"]:
+            if i in NWN.graph["electrode_list"]:
                 ax.plot(*np.array(NWN.graph["lines"][i]).T, c="xkcd:light blue")
             else:
                 ax.plot(*np.array(NWN.graph["lines"][i]).T, c="pink")
@@ -145,7 +176,10 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
     # Add wires to NWN
     for i in range(new_wire_num):
         NWN.graph["lines"].append(lines[i])
-        NWN.add_node(start_ind + i, electrode=electrodes[i])
+        NWN.add_node(
+            (start_ind + i,), 
+            electrode = electrodes[i]
+        )
         
         if electrodes[i]:
             NWN.graph["electrode_list"].append(start_ind + i)
@@ -162,7 +196,7 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
         
         # Uniform junction resistances
         NWN.add_edges_from(
-            intersect_dict.keys(), 
+            [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
             resistance = NWN.graph["junction_resistance"]
         )
         NWN.graph["loc"].update(intersect_dict)
@@ -171,9 +205,9 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
     NWN.graph["wire_density"] = (NWN.graph["wire_num"] - len(NWN.graph["electrode_list"])) / NWN.graph["size"]
 
 
-def conductance_matrix(NWN: nx.Graph, drain_node: int):
+def _conductance_matrix_JDA(NWN: nx.Graph, drain_node: int):
     """
-    Create the (sparse) conductance matrix for a given NWN.
+    Create the (sparse) conductance matrix for a given JDA NWN.
 
     """
     wire_num = NWN.graph["wire_num"]
@@ -186,24 +220,39 @@ def conductance_matrix(NWN: nx.Graph, drain_node: int):
                     G[i, j] = 1.0
                 else:
                     G[i, j] = sum(
-                        [1 / NWN[edge[0]][edge[1]]["resistance"] for edge in NWN.edges(i) if NWN[edge[0]][edge[1]]["resistance"] != 0]
+                        [1 / NWN[edge[0]][edge[1]]["resistance"] for edge in NWN.edges((i,)) if NWN[edge[0]][edge[1]]["resistance"] != 0]
                     )
 
                     # Ground every node with a large resistor: 1e-8 -> 100 MΩ
                     G[i, j] += 1e-8
             else:
                 if i != drain_node:
-                    edge_data = NWN.get_edge_data(i, j)
+                    edge_data = NWN.get_edge_data((i,), (j,))
                     if edge_data:
                         G[i, j] = -1 / edge_data["resistance"]
     return G
 
 
-def solve_network(NWN: nx.Graph, source_node: int, drain_node: int, voltage: float):
+def _conductance_matrix_MNR(NWN: nx.Graph, drain_node: tuple):
+    pass
+
+
+def conductance_matrix(NWN: nx.Graph, drain_node: tuple):
+    if NWN.graph["type"] == "JDA":
+        return _conductance_matrix_JDA(NWN, drain_node[0])
+    elif NWN.graph["type"] == "MNR":
+        return _conductance_matrix_MNR(NWN, drain_node)
+    else:
+        raise ValueError("Nanowire network has invalid type.")
+
+
+def solve_network(NWN: nx.Graph, source_node: tuple, drain_node: tuple, voltage: float):
     """
     Solve for the voltages of each wire in a given NWN.
     The source node will be at the specified voltage and
     the drain node will be grounded.
+
+    Not fixed for MNR yet.
     
     """
     wire_num = NWN.graph["wire_num"]
