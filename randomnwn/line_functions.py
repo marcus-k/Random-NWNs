@@ -4,7 +4,7 @@
 # Functions for random lines.
 # 
 # Author: Marcus Kasdorf
-# Date:   May 18, 2021
+# Date:   May 20, 2021
 
 from typing import List, Dict, Tuple
 import numpy as np
@@ -111,7 +111,7 @@ def find_line_intersects(ind: int, lines: List[LineString]) -> Dict[Tuple[int, i
     return out
 
 
-def add_points_to_line(line: LineString, points: List[Point]) -> LineString:
+def add_points_to_line(line: LineString, points: List[Point], return_ordering=False):
     """
     Given a list of points and a line, add the projected points to the line.
 
@@ -129,10 +129,19 @@ def add_points_to_line(line: LineString, points: List[Point]) -> LineString:
     dists = [line.project(Point(p)) for p in coords]
 
     # Sort the coords based on the distances
-    coords = [point for (_, point) in sorted(zip(dists, coords))]
+    coords, ordering = map(list, zip(
+        *[(point, ind) for _, point, ind in sorted(zip(dists, coords, range(len(coords))))]
+    ))
+
+    ordering.remove(0); ordering.remove(1)
+    ordering = [ordering[i] - 2 for i in range(len(ordering))]
 
     # Overwrite old line
     line = LineString(coords)
 
-    return line
+    if return_ordering:
+        return line, ordering
+    else:
+        return line
+    
 
