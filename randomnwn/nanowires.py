@@ -20,7 +20,8 @@ def create_NWN(
     width: float = 50.0, 
     density: float = 0.3, 
     seed: int = None,
-    resistance: float = 10
+    resistance: float = 10,
+    capacitance: float = 1000
 ) -> nx.Graph:
     """
     Create a nanowire network stored in a networkx graph. The wires are the 
@@ -34,6 +35,7 @@ def create_NWN(
     number of wires is used.
 
     Wire length and grid width are in micrometers. Resistance is in ohms.
+    Capacitance is in microfarads.
 
     """
     # Get closest density with an integer number of wires.
@@ -49,6 +51,7 @@ def create_NWN(
         wire_density = density, 
         wire_num = wire_num,
         junction_resistance = resistance,
+        junction_capacitance = capacitance,
         electrode_list = [],
         lines = [],
         type = "JDA"
@@ -66,7 +69,9 @@ def create_NWN(
     intersect_dict = find_intersects(NWN.graph["lines"])
     NWN.add_edges_from(
         [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
-        resistance = resistance
+        resistance = resistance,
+        capacitance = capacitance,
+        is_open = False
     )
     NWN.graph["loc"] = intersect_dict
     
@@ -115,14 +120,17 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
         if i in NWN.graph["electrode_list"]:
             continue
 
-        # Get resistances
+        # Get junction attributes
         junction_resistance = NWN.graph["junction_resistance"]
+        junction_capacitance = NWN.graph["junction_capacitance"]
 
         # Split nodes into subnodes representing the junctions on the wires
         for j, (edge, loc) in enumerate(junction_locs.items()):
             other_node = edge[~edge.index((i,))]
-            NWN.add_node((i, j), loc=loc)
-            NWN.add_edge((i, j), other_node, resistance=junction_resistance)
+            NWN.add_node((i, j), loc=loc, electrode=False)
+            NWN.add_edge(
+                (i, j), other_node, resistance=junction_resistance, capacitance=junction_capacitance, is_open=False
+            )
         NWN.remove_node((i,))
 
         # Add edges between subnodes
@@ -198,6 +206,8 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
     Adds wires to a given nanowire network.
 
     Currently, adding a wire that already exists breaks things.
+
+    Also, adding wires to a MNR NWN does not work yet.
     
     """
     new_wire_num = len(lines)
@@ -233,7 +243,9 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
         # Uniform junction resistances
         NWN.add_edges_from(
             [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
-            resistance = NWN.graph["junction_resistance"]
+            resistance = NWN.graph["junction_resistance"],
+            capacitance = NWN.graph["junction_capacitance"],
+            is_open = False
         )
         NWN.graph["loc"].update(intersect_dict)
 
