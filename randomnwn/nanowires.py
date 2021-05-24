@@ -4,13 +4,11 @@
 # Functions to create nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   May 20, 2021
+# Date:   May 24, 2021
 
-from typing import List, Dict, Tuple
-from networkx.classes import graph
+from typing import List
 import numpy as np
-import scipy
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -27,6 +25,9 @@ def create_NWN(
     """
     Create a nanowire network stored in a networkx graph. The wires are the 
     graph's vertices, while the wire junctions are represented by the edges.
+
+    The nanowire network started in the junction-dominated assumption, but
+    can be converted to the multi-nodal representation after creation. 
 
     The density might not be attainable with the given size as there can only 
     be a integer number of wires. Thus, the closest density to an integer 
@@ -77,7 +78,7 @@ def create_NWN(
 
 def convert_NWN_to_MNR(NWN: nx.Graph):
     """
-    Converts a NWN from the the junction-dominated assumption to the 
+    Converts a NWN from the junction-dominated assumption to the 
     multi-nodal representation.
 
     Parameters
@@ -114,11 +115,14 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
         if i in NWN.graph["electrode_list"]:
             continue
 
+        # Get resistances
+        junction_resistance = NWN.graph["junction_resistance"]
+
         # Split nodes into subnodes representing the junctions on the wires
         for j, (edge, loc) in enumerate(junction_locs.items()):
             other_node = edge[~edge.index((i,))]
             NWN.add_node((i, j), loc=loc)
-            NWN.add_edge((i, j), other_node)
+            NWN.add_edge((i, j), other_node, resistance=junction_resistance)
         NWN.remove_node((i,))
 
         # Add edges between subnodes
@@ -155,7 +159,12 @@ def plot_NWN(NWN, intersections=True, rnd_color=False):
     return fig, ax
 
 
-def draw_NWN(NWN: nx.Graph, figsize: tuple = (12, 12), sol: np.ndarray = None):
+def draw_NWN(
+    NWN: nx.Graph, 
+    figsize: tuple = None,
+    font_size: int = 8,
+    sol: np.ndarray = None
+):
     """
     Draw the given nanowire network as a networkx graph.
 
@@ -163,14 +172,16 @@ def draw_NWN(NWN: nx.Graph, figsize: tuple = (12, 12), sol: np.ndarray = None):
     fig, ax = plt.subplots(figsize=figsize)
 
     if NWN.graph["type"] == "JDA":
-        pos = [np.array(NWN.graph["lines"][i].centroid) for i in range(NWN.graph["wire_num"])]
+        # Nodes are placed at the center of the wire
+        pos = {(i,): np.array(NWN.graph["lines"][i].centroid) for i in range(NWN.graph["wire_num"])}
 
-        if sol:
-            labels = {key: str(round(value, 2)) for key, value in zip(range(NWN.graph["wire_num"]), sol)}
+        # Label node voltages if sol is given, else just label as nodes numbers
+        if sol is not None:
+            labels = {(key,): str(round(value, 2)) for key, value in zip(range(NWN.graph["wire_num"]), sol)}
         else:
             labels = {(i,): i for i in range(NWN.graph["wire_num"])}
 
-        nx.draw(NWN, ax=ax, node_size=40, pos=pos, labels=labels, font_size=8, edge_color="r")
+        nx.draw(NWN, ax=ax, node_size=40, pos=pos, labels=labels, font_size=font_size, edge_color="r")
 
     elif NWN.graph["type"] == "MNR":
         pass
@@ -178,6 +189,7 @@ def draw_NWN(NWN: nx.Graph, figsize: tuple = (12, 12), sol: np.ndarray = None):
     else:
         raise ValueError("Nanowire network has invalid type.")
 
+    plt.show()
     return fig, ax
 
 
@@ -185,7 +197,7 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
     """
     Adds wires to a given nanowire network.
 
-    Currently adding a wire that already exists breaks things.
+    Currently, adding a wire that already exists breaks things.
     
     """
     new_wire_num = len(lines)
@@ -227,75 +239,3 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
 
     # Update wire density
     NWN.graph["wire_density"] = (NWN.graph["wire_num"] - len(NWN.graph["electrode_list"])) / NWN.graph["size"]
-
-
-def _conductance_matrix_JDA(NWN: nx.Graph, drain_node: int):
-    """
-    Create the (sparse) conductance matrix for a given JDA NWN.
-
-    """
-    wire_num = NWN.graph["wire_num"]
-    G = scipy.sparse.dok_matrix((wire_num, wire_num))
-    
-    for i in range(wire_num):
-        for j in range(wire_num):
-            if i == j:
-                if i == drain_node:
-                    G[i, j] = 1.0
-                else:
-                    G[i, j] = sum(
-                        [1 / NWN[edge[0]][edge[1]]["resistance"] for edge in NWN.edges((i,)) if NWN[edge[0]][edge[1]]["resistance"] != 0]
-                    )
-
-                    # Ground every node with a large resistor: 1e-8 -> 100 MΩ
-                    G[i, j] += 1e-8
-            else:
-                if i != drain_node:
-                    edge_data = NWN.get_edge_data((i,), (j,))
-                    if edge_data:
-                        G[i, j] = -1 / edge_data["resistance"]
-    return G
-
-
-def _conductance_matrix_MNR(NWN: nx.Graph, drain_node: tuple):
-    pass
-
-
-def conductance_matrix(NWN: nx.Graph, drain_node: tuple):
-    if NWN.graph["type"] == "JDA":
-        return _conductance_matrix_JDA(NWN, drain_node[0])
-    elif NWN.graph["type"] == "MNR":
-        return _conductance_matrix_MNR(NWN, drain_node)
-    else:
-        raise ValueError("Nanowire network has invalid type.")
-
-
-def solve_network(NWN: nx.Graph, source_node: tuple, drain_node: tuple, voltage: float) -> np.ndarray:
-    """
-    Solve for the voltages of each wire in a given NWN.
-    The source node will be at the specified voltage and
-    the drain node will be grounded.
-
-    Not fixed for MNR yet.
-    
-    """
-    wire_num = NWN.graph["wire_num"]
-    G = conductance_matrix(NWN, drain_node)
-
-    B = scipy.sparse.dok_matrix((wire_num, 1))
-    B[source_node, 0] = -1
-
-    C = -B.T
-
-    D = None
-
-    A = scipy.sparse.bmat([[G, B], [C, D]])
-    z = scipy.sparse.dok_matrix((wire_num + 1, 1))
-    z[-1] = voltage
-
-    # SparseEfficiencyWarning: spsolve requires A be CSC or CSR matrix format
-    x = scipy.sparse.linalg.spsolve(A.tocsr(), z)
-    return x
-
-
-
