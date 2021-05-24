@@ -77,7 +77,13 @@ def create_NWN(
 
 def convert_NWN_to_MNR(NWN: nx.Graph):
     """
-    Unfinished.
+    Converts a NWN from the the junction-dominated assumption to the 
+    multi-nodal representation.
+
+    Parameters
+    ----------
+    NWN : nx.Graph
+        JDA nanowire network.
 
     """
     if NWN.graph["type"] == "MNR":
@@ -146,6 +152,32 @@ def plot_NWN(NWN, intersections=True, rnd_color=False):
                 ax.plot(*np.array(NWN.graph["lines"][i]).T, c="pink")
 
     plt.show()
+    return fig, ax
+
+
+def draw_NWN(NWN: nx.Graph, figsize: tuple = (12, 12), sol: np.ndarray = None):
+    """
+    Draw the given nanowire network as a networkx graph.
+
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+
+    if NWN.graph["type"] == "JDA":
+        pos = [np.array(NWN.graph["lines"][i].centroid) for i in range(NWN.graph["wire_num"])]
+
+        if sol:
+            labels = {key: str(round(value, 2)) for key, value in zip(range(NWN.graph["wire_num"]), sol)}
+        else:
+            labels = {(i,): i for i in range(NWN.graph["wire_num"])}
+
+        nx.draw(NWN, ax=ax, node_size=40, pos=pos, labels=labels, font_size=8, edge_color="r")
+
+    elif NWN.graph["type"] == "MNR":
+        pass
+
+    else:
+        raise ValueError("Nanowire network has invalid type.")
+
     return fig, ax
 
 
