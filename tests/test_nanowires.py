@@ -1,5 +1,5 @@
 import pytest
-from ..randomnwn import *
+from randomnwn import *
 
 def test_NWN_type():
     NWN = create_NWN()
