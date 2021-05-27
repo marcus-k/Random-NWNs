@@ -21,7 +21,8 @@ def create_NWN(
     density: float = 0.3, 
     seed: int = None,
     resistance: float = 10,
-    capacitance: float = 1000
+    capacitance: float = 1000,
+    break_voltage: float = 1
 ) -> nx.Graph:
     """
     Create a nanowire network stored in a networkx graph. The wires are the 
@@ -52,6 +53,7 @@ def create_NWN(
         wire_num = wire_num,
         junction_resistance = resistance,
         junction_capacitance = capacitance,
+        break_voltage = break_voltage,
         electrode_list = [],
         lines = [],
         type = "JDA"
