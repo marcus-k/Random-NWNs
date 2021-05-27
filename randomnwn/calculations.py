@@ -37,7 +37,7 @@ def _capacitance_matrix_JDA(NWN: nx.Graph, drain_node: tuple):
 
 
 def _capacitance_matrix_MNR(NWN: nx.Graph, drain_node: tuple):
-    pass
+    raise NotImplementedError()
 
 
 def capacitance_matrix(NWN: nx.Graph, drain_node: tuple):
@@ -85,7 +85,7 @@ def _conductance_matrix_JDA(NWN: nx.Graph, drain_node: int):
 
 
 def _conductance_matrix_MNR(NWN: nx.Graph, drain_node: tuple):
-    pass
+    raise NotImplementedError()
 
 
 def conductance_matrix(NWN: nx.Graph, drain_node: tuple):

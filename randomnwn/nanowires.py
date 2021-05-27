@@ -194,7 +194,7 @@ def draw_NWN(
         nx.draw(NWN, ax=ax, node_size=40, pos=pos, labels=labels, font_size=font_size, edge_color="r")
 
     elif NWN.graph["type"] == "MNR":
-        pass
+        raise NotImplementedError()
 
     else:
         raise ValueError("Nanowire network has invalid type.")
