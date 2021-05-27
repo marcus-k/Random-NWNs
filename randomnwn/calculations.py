@@ -37,7 +37,28 @@ def _capacitance_matrix_JDA(NWN: nx.Graph, drain_node: tuple):
 
 
 def _capacitance_matrix_MNR(NWN: nx.Graph, drain_node: tuple):
-    raise NotImplementedError()
+    """
+    Create the (sparse) conductance matrix for a given MNR NWN.
+
+    """
+    # Get Laplacian matrix
+    nodelist = sorted(NWN.nodes())
+    nodelist_len = len(nodelist)
+    M_C = laplacian_matrix(NWN, nodelist=nodelist, weight="capacitance")
+
+    # Ground every node with a tiny capacitor 
+    # to ensure no singular matrices: 1e-8 uF
+    M_C += scipy.sparse.dia_matrix(
+        (np.ones(nodelist_len) * 1e-8, [0]), shape=(nodelist_len, nodelist_len)
+    )
+
+    # Zero the drain node row
+    M_C = M_C.tolil()
+    drain_node_index = nodelist.index(drain_node)
+    M_C[drain_node_index] = 0
+    M_C[drain_node_index, drain_node_index] = 1
+
+    return M_C
 
 
 def capacitance_matrix(NWN: nx.Graph, drain_node: tuple):
@@ -133,6 +154,7 @@ def solve_network(
     z[drain_node] = end_voltage
     z[-1] = voltage
 
+    # Solve linear equations
     *voltage_list, charge = scipy.sparse.linalg.spsolve(A.tocsr(), z)
 
     # Stored activation data in edges

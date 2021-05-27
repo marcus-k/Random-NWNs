@@ -22,7 +22,7 @@ def create_NWN(
     seed: int = None,
     resistance: float = 10,
     capacitance: float = 1000,
-    break_voltage: float = 1
+    break_voltage: float = -1
 ) -> nx.Graph:
     """
     Create a nanowire network stored in a networkx graph. The wires are the 
@@ -194,7 +194,7 @@ def draw_NWN(
         nx.draw(NWN, ax=ax, node_size=40, pos=pos, labels=labels, font_size=font_size, edge_color="r")
 
     elif NWN.graph["type"] == "MNR":
-        raise NotImplementedError()
+        nx.draw(NWN, ax=ax, node_size=40, with_labels=True, font_size=font_size, edge_color="r")
 
     else:
         raise ValueError("Nanowire network has invalid type.")
