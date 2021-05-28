@@ -35,8 +35,38 @@ def create_NWN(
     be a integer number of wires. Thus, the closest density to an integer 
     number of wires is used.
 
-    Wire length and grid width are in micrometers. Conductance is in Siemens.
-    Capacitance is in microfarads.
+    Parameters
+    ----------
+    wire_length : float, optional
+        Length of each nanowire. Given in micrometers.
+
+    width : float, optional
+        Side length of the area of which the nanowires lie. 
+        Given in micrometers.
+
+    density : float, optional
+        Density of nanowires in the area determined by the width.
+        Given in #NW/micrometer^2.
+
+    seed : int, optional
+        Seed for random nanowire generation.
+
+    conductance : float, optional
+        The junction conductance of the nanowires where they intersect.
+        Given in siemens.
+
+    capacitance : float, optional
+        The junction capacitance of the nanowires where they intersect.
+        Given in microfarads.
+    
+    break_voltage : float, optional
+        The voltage at which junctions switch from behaving like capacitors
+        to resistors. Given in volts.
+
+    Returns
+    -------
+    NWN : Graph
+        The created random nanowire network.
 
     """
     # Get closest density with an integer number of wires.
@@ -64,7 +94,9 @@ def create_NWN(
 
     # Add the wires as nodes to the graph
     for i in range(NWN.graph["wire_num"]):
-        NWN.graph["lines"].append(create_line(NWN.graph["wire_length"], xmax=NWN.graph["width"], ymax=NWN.graph["width"], rng=rng))
+        NWN.graph["lines"].append(create_line(
+            NWN.graph["wire_length"], xmax=NWN.graph["width"], ymax=NWN.graph["width"], rng=rng
+        ))
         NWN.add_node((i,), electrode=False)
         
     # Find intersects
@@ -85,7 +117,7 @@ def create_NWN(
 
 def convert_NWN_to_MNR(NWN: nx.Graph):
     """
-    Converts a NWN from the junction-dominated assumption to the 
+    Converts a NWN in-place from the junction-dominated assumption to the 
     multi-nodal representation.
 
     Parameters
@@ -135,7 +167,7 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
             )
         NWN.remove_node((i,))
 
-        # Add edges between subnodesr
+        # Add edges between subnodes
         for ind, next_ind in zip(ordering, ordering[1:]):
             NWN.add_edge((i, ind), (i, next_ind), conductance=1e8, capacitance=0)
 
@@ -143,6 +175,27 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
 def plot_NWN(NWN, intersections=True, rnd_color=False):
     """
     Plots a given nanowire network.
+
+    Parameters
+    ----------
+    NWN : Graph
+        Nanowire network to plot.
+
+    intersections : bool, optional
+        Whether or not to scatter plot the interesections as well.
+        Defaults to true.
+
+    rnd_color : bool, optional
+        Whether or not to randomize the colors of the plotted lines.
+        Defaults to false.
+
+    Returns
+    -------
+    fig : Figure
+        Figure object of the plot.
+
+    ax : Axes
+        Axes object of the plot.
 
     """
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -177,6 +230,29 @@ def draw_NWN(
 ):
     """
     Draw the given nanowire network as a networkx graph.
+
+    Parameters
+    ----------
+    NNW : Graph
+        Nanowire network to draw.
+
+    figsize : tuple, optional
+        Figure size to be passed to `plt.subplots`.
+
+    font_size : int, optional
+        Font size to be passed to `nx.draw`.
+
+    sol : ndarray, optional
+        If supplied, these values will be display as node labels
+        instead of the names of the nodes.
+
+    Returns
+    -------
+    fig : Figure
+        Figure object of the plot.
+
+    ax : Axes
+        Axes object of the plot.
 
     """
     fig, ax = plt.subplots(figsize=figsize)
@@ -218,8 +294,23 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
     Currently, adding a wire that already exists breaks things.
 
     Also, adding wires to a MNR NWN does not work yet.
+
+    Parameters
+    ----------
+    NWN : Graph
+        Nanowire network to add wires to.
+
+    lines : list of LineStrings
+        A list of shapely LineStrings, representing nanowires, to be added.
+
+    electrodes : list of bool
+        A list of boolean values specifying whether or not the corresponding
+        nanowire in `lines` is an electrode.
     
     """
+    if NWN.graph["type"] == "MNR":
+        raise NotImplementedError()
+
     new_wire_num = len(lines)
 
     if new_wire_num != len(electrodes):
