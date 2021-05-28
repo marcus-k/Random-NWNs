@@ -4,7 +4,7 @@
 # Functions to solve nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   May 24, 2021
+# Date:   May 28, 2021
 
 import numpy as np
 import scipy
@@ -79,28 +79,21 @@ def _conductance_matrix_JDA(NWN: nx.Graph, drain_node: int):
     Create the (sparse) conductance matrix for a given JDA NWN.
 
     """
+    # Get Laplacian matrix
     wire_num = NWN.graph["wire_num"]
-    G = scipy.sparse.dok_matrix((wire_num, wire_num))
-    
-    for i in range(wire_num):
-        for j in range(wire_num):
-            # Main diagonal
-            if i == j:
-                if i == drain_node:
-                    G[i, j] = 1.0
-                else:
-                    G[i, j] = sum(
-                        [1 / NWN.edges[edge]["resistance"] for edge in NWN.edges((i,)) if NWN.edges[edge]["is_shorted"]]
-                    )
+    nodelist = [(i,) for i in range(wire_num)]
+    G = laplacian_matrix(NWN, nodelist=nodelist, weight="is_shorted")
 
-                    # Ground every node with a large resistor: 1/1e8 -> 100 MΩ
-                    G[i, j] += 1e-8
+    # Ground every node with a huge resistor 
+    # to ensure no singular matrices: 1/1e8 S -> 100 MΩ
+    G += scipy.sparse.dia_matrix(
+        (np.ones(wire_num) * 1e-8, [0]), shape=(wire_num, wire_num)
+    )
 
-            # All non-diagonal elements except the drain node row
-            elif i != drain_node:
-                edge_data = NWN.get_edge_data((i,), (j,))
-                if edge_data is not None and edge_data["is_shorted"]:
-                    G[i, j] = -1 / edge_data["resistance"]
+    # Zero the drain node row
+    G = G.tolil()
+    G[drain_node] = 0
+    G[drain_node, drain_node] = 1
 
     return G
 
@@ -160,10 +153,8 @@ def solve_network(
     # Stored activation data in edges
     for node1, node2 in NWN.edges():
         voltage_drop = abs(voltage_list[node1[0]] - voltage_list[node2[0]])
-        if voltage_drop > NWN.graph["break_voltage"]:
-            NWN.edges[(node1, node2)]["is_shorted"] = True
-        else:
-            NWN.edges[(node1, node2)]["is_shorted"] = False
+        if voltage_drop < NWN.graph["break_voltage"]:
+            NWN.edges[(node1, node2)]["is_shorted"] = 0
 
 
 
