@@ -85,7 +85,7 @@ def _conductance_matrix_JDA(NWN: nx.Graph, drain_node: int):
     G = laplacian_matrix(NWN, nodelist=nodelist, weight="is_shorted")
 
     # Ground every node with a huge resistor 
-    # to ensure no singular matrices: 1/1e8 S -> 100 MΩ
+    # to ensure no singular matrices: 1e-8 S -> 100 MΩ
     G += scipy.sparse.dia_matrix(
         (np.ones(wire_num) * 1e-8, [0]), shape=(wire_num, wire_num)
     )
@@ -99,7 +99,28 @@ def _conductance_matrix_JDA(NWN: nx.Graph, drain_node: int):
 
 
 def _conductance_matrix_MNR(NWN: nx.Graph, drain_node: tuple):
-    raise NotImplementedError()
+    """
+    Create the (sparse) conductance matrix for a given MNR NWN.
+
+    """
+    # Get Laplacian matrix
+    nodelist = sorted(NWN.nodes())
+    nodelist_len = len(nodelist)
+    G = laplacian_matrix(NWN, nodelist=nodelist, weight="is_shorted")
+
+    # Ground every node with a huge resistor 
+    # to ensure no singular matrices: 1e-8 S -> 100 MΩ
+    G += scipy.sparse.dia_matrix(
+        (np.ones(nodelist_len) * 1e-8, [0]), shape=(nodelist_len, nodelist_len)
+    )
+
+    # Zero the drain node row
+    G = G.tolil()
+    drain_node_index = nodelist.index(drain_node)
+    G[drain_node_index] = 0
+    G[drain_node_index, drain_node_index] = 1
+
+    return G
 
 
 def conductance_matrix(NWN: nx.Graph, drain_node: tuple):
@@ -126,29 +147,34 @@ def solve_network(
     Solve for the voltages of each wire in a given NWN.
     The source node will be at the specified voltage and
     the drain node will be grounded.
-
-    Not fixed for MNR yet.
     
     """
+    # Find node ordering and indexes
+    nodelist = sorted(NWN.nodes())
+    nodelist_len = len(nodelist)
+    source_index = nodelist.index(source_node)
+    drain_index = nodelist.index(drain_node)
+
+
     # Calculate junction capacitances to determine shorted junctions
     M_C = capacitance_matrix(NWN, drain_node)
 
     # Create block matrix to solve network for voltage and charge
-    wire_num = NWN.graph["wire_num"]
-    B = scipy.sparse.dok_matrix((wire_num, 1))
-    B[source_node, 0] = -1
+    B = scipy.sparse.dok_matrix((nodelist_len, 1))
+    B[source_index, 0] = -1
 
     C = -B.T
 
     D = None
 
     A = scipy.sparse.bmat([[M_C, B], [C, D]])
-    z = scipy.sparse.dok_matrix((wire_num + 1, 1))
-    z[drain_node] = end_voltage
+    z = scipy.sparse.dok_matrix((nodelist_len + 1, 1))
+    z[drain_index] = end_voltage
     z[-1] = voltage
 
     # Solve linear equations
     *voltage_list, charge = scipy.sparse.linalg.spsolve(A.tocsr(), z)
+
 
     # Stored activation data in edges
     for node1, node2 in NWN.edges():
@@ -157,20 +183,19 @@ def solve_network(
             NWN.edges[(node1, node2)]["is_shorted"] = 0
 
 
-
     # Solve the network only for the shorted junctions
     G = conductance_matrix(NWN, drain_node)
 
-    B = scipy.sparse.dok_matrix((wire_num, 1))
-    B[source_node, 0] = -1
+    B = scipy.sparse.dok_matrix((nodelist_len, 1))
+    B[source_index, 0] = -1
 
     C = -B.T
 
     D = None
 
     A = scipy.sparse.bmat([[G, B], [C, D]])
-    z = scipy.sparse.dok_matrix((wire_num + 1, 1))
-    z[drain_node] = end_voltage
+    z = scipy.sparse.dok_matrix((nodelist_len + 1, 1))
+    z[drain_index] = end_voltage
     z[-1] = voltage
 
     # SparseEfficiencyWarning: spsolve requires A be CSC or CSR matrix format

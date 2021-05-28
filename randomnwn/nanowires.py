@@ -135,9 +135,9 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
             )
         NWN.remove_node((i,))
 
-        # Add edges between subnodes
+        # Add edges between subnodesr
         for ind, next_ind in zip(ordering, ordering[1:]):
-            NWN.add_edge((i, ind), (i, next_ind))
+            NWN.add_edge((i, ind), (i, next_ind), conductance=1e8, capacitance=0)
 
 
 def plot_NWN(NWN, intersections=True, rnd_color=False):
@@ -194,7 +194,15 @@ def draw_NWN(
         nx.draw(NWN, ax=ax, node_size=40, pos=pos, labels=labels, font_size=font_size, edge_color="r")
 
     elif NWN.graph["type"] == "MNR":
-        nx.draw(NWN, ax=ax, node_size=40, with_labels=True, font_size=font_size, edge_color="r")
+        kwargs = {}
+        if sol is not None:
+            labels = {node: str(round(value, 2)) for node, value in zip(sorted(NWN.nodes()), sol)}
+            kwargs.update({"labels": labels})
+        else:
+            kwargs.update({"with_labels": True})
+
+
+        nx.draw(NWN, ax=ax, node_size=40, font_size=font_size, edge_color="r", **kwargs)
 
     else:
         raise ValueError("Nanowire network has invalid type.")
