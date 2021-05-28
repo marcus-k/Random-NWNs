@@ -4,7 +4,7 @@
 # Functions to create nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   May 24, 2021
+# Date:   May 28, 2021
 
 from typing import List
 import numpy as np
@@ -20,7 +20,7 @@ def create_NWN(
     width: float = 50.0, 
     density: float = 0.3, 
     seed: int = None,
-    resistance: float = 10,
+    conductance: float = 0.1,
     capacitance: float = 1000,
     break_voltage: float = -1
 ) -> nx.Graph:
@@ -35,7 +35,7 @@ def create_NWN(
     be a integer number of wires. Thus, the closest density to an integer 
     number of wires is used.
 
-    Wire length and grid width are in micrometers. Resistance is in ohms.
+    Wire length and grid width are in micrometers. Conductance is in Siemens.
     Capacitance is in microfarads.
 
     """
@@ -51,7 +51,7 @@ def create_NWN(
         size = size,
         wire_density = density, 
         wire_num = wire_num,
-        junction_resistance = resistance,
+        junction_conductance = conductance,
         junction_capacitance = capacitance,
         break_voltage = break_voltage,
         electrode_list = [],
@@ -71,9 +71,9 @@ def create_NWN(
     intersect_dict = find_intersects(NWN.graph["lines"])
     NWN.add_edges_from(
         [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
-        resistance = resistance,
-        capacitance = capacitance,
-        is_open = False
+        conductance = conductance,
+        is_shorted = conductance,
+        capacitance = capacitance
     )
     NWN.graph["loc"] = intersect_dict
     
@@ -123,7 +123,7 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
             continue
 
         # Get junction attributes
-        junction_resistance = NWN.graph["junction_resistance"]
+        junction_conductance = NWN.graph["junction_conductance"]
         junction_capacitance = NWN.graph["junction_capacitance"]
 
         # Split nodes into subnodes representing the junctions on the wires
@@ -131,7 +131,7 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
             other_node = edge[~edge.index((i,))]
             NWN.add_node((i, j), loc=loc, electrode=False)
             NWN.add_edge(
-                (i, j), other_node, resistance=junction_resistance, capacitance=junction_capacitance, is_open=False
+                (i, j), other_node, conductance=junction_conductance, capacitance=junction_capacitance
             )
         NWN.remove_node((i,))
 
@@ -235,19 +235,19 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
         # Find intersects
         intersect_dict = find_line_intersects(start_ind + i, NWN.graph["lines"])
 
-        # Custom contact junction resistances
+        # Custom contact junction conductances
         # for ind in intersect_dict.keys():
-        #     resistance = NWN.graph["junction_resistance"]
+        #     conductance = NWN.graph["junction_conductance"]
         #     if ind[0] in NWN.graph["electrode_list"] or ind[1] in NWN.graph["electrode_list"]:
-        #         resistance = 0.0
-        #     NWN.add_edge(*ind, resistance=resistance)
+        #         conductance = 10 # contact conductance
+        #     NWN.add_edge(*ind, conductance=conductance)
         
-        # Uniform junction resistances
+        # Uniform junction conductances
         NWN.add_edges_from(
             [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
-            resistance = NWN.graph["junction_resistance"],
-            capacitance = NWN.graph["junction_capacitance"],
-            is_open = False
+            conductance = NWN.graph["junction_conductance"],
+            is_shorted = NWN.graph["junction_conductance"],
+            capacitance = NWN.graph["junction_capacitance"]
         )
         NWN.graph["loc"].update(intersect_dict)
 
