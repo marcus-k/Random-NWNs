@@ -178,7 +178,10 @@ def solve_network(
 
     # Stored activation data in edges
     for node1, node2 in NWN.edges():
-        voltage_drop = abs(voltage_list[node1[0]] - voltage_list[node2[0]])
+        node1_ind = nodelist.index(node1)
+        node2_ind = nodelist.index(node2)
+        voltage_drop = abs(voltage_list[node1_ind] - voltage_list[node2_ind])
+        
         if voltage_drop < NWN.graph["break_voltage"]:
             NWN.edges[(node1, node2)]["is_shorted"] = 0
 
