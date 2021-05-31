@@ -24,21 +24,7 @@ The package can then be used by importing it as:
 
 # Usage
 
-Create a nanowire network using:
-
-`NWN = create_NWN()`
-
-A networkx graph object is created with the following graph attributes:
-- wire_length
-- width
-- size
-- wire_density 
-- wire_num
-- junction_resistance 
-- junction_capacitance
-- electrode_list 
-- lines
-- type
+See the [wiki pages](https://github.com/Marcus-Repository/Random-NWNs/wiki).
 
 # Uninstallation
 
