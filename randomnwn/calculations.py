@@ -6,6 +6,7 @@
 # Author: Marcus Kasdorf
 # Date:   May 28, 2021
 
+from matplotlib.pyplot import sci
 import numpy as np
 import scipy
 import networkx as nx
@@ -143,7 +144,8 @@ def solve_network(
     source_node: tuple, 
     drain_node: tuple, 
     voltage: float,
-    end_voltage: float = 0
+    end_voltage: float = 0,
+    solver: str = "spsolve"
 ) -> np.ndarray:
     """
     Solve for the voltages of each wire in a given NWN.
@@ -151,12 +153,16 @@ def solve_network(
     the drain node will be grounded.
     
     """
+    if solver not in ["spsolve", "lsqr"]:
+        raise ValueError("Solver is not a valid argument.")
+
     # Find node ordering and indexes
     nodelist = sorted(NWN.nodes())
     nodelist_len = len(nodelist)
     source_index = nodelist.index(source_node)
     drain_index = nodelist.index(drain_node)
 
+    ground_nodes = False if solver == "lsqr" else True
 
     # Calculate junction capacitances to determine shorted junctions
     M_C = capacitance_matrix(NWN, drain_node)
@@ -189,7 +195,7 @@ def solve_network(
 
 
     # Solve the network only for the shorted junctions
-    G = conductance_matrix(NWN, drain_node)
+    G = conductance_matrix(NWN, drain_node, ground_nodes)
 
     B = scipy.sparse.dok_matrix((nodelist_len, 1))
     B[source_index, 0] = -1
@@ -204,7 +210,11 @@ def solve_network(
     z[-1] = voltage
 
     # SparseEfficiencyWarning: spsolve requires A be CSC or CSR matrix format
-    x = scipy.sparse.linalg.spsolve(A.tocsr(), z)
-    return x
+    if solver == "spsolve":
+        x = scipy.sparse.linalg.spsolve(A.tocsr(), z)
+        return x
+    elif solver == "lsqr":
+        x, *out = scipy.sparse.linalg.lsqr(A, z.toarray())
+        return x, out
 
 
