@@ -74,7 +74,7 @@ def capacitance_matrix(NWN: nx.Graph, drain_node: tuple):
         raise ValueError("Nanowire network has invalid type.")
 
 
-def _conductance_matrix_JDA(NWN: nx.Graph, drain_node: int):
+def _conductance_matrix_JDA(NWN: nx.Graph, drain_node: int, ground_nodes: bool):
     """
     Create the (sparse) conductance matrix for a given JDA NWN.
 
@@ -86,9 +86,10 @@ def _conductance_matrix_JDA(NWN: nx.Graph, drain_node: int):
 
     # Ground every node with a huge resistor 
     # to ensure no singular matrices: 1e-8 S -> 100 MΩ
-    G += scipy.sparse.dia_matrix(
-        (np.ones(wire_num) * 1e-8, [0]), shape=(wire_num, wire_num)
-    )
+    if ground_nodes:
+        G += scipy.sparse.dia_matrix(
+            (np.ones(wire_num) * 1e-8, [0]), shape=(wire_num, wire_num)
+        )
 
     # Zero the drain node row
     G = G.tolil()
@@ -98,7 +99,7 @@ def _conductance_matrix_JDA(NWN: nx.Graph, drain_node: int):
     return G
 
 
-def _conductance_matrix_MNR(NWN: nx.Graph, drain_node: tuple):
+def _conductance_matrix_MNR(NWN: nx.Graph, drain_node: tuple, ground_nodes: bool):
     """
     Create the (sparse) conductance matrix for a given MNR NWN.
 
@@ -110,9 +111,10 @@ def _conductance_matrix_MNR(NWN: nx.Graph, drain_node: tuple):
 
     # Ground every node with a huge resistor 
     # to ensure no singular matrices: 1e-8 S -> 100 MΩ
-    G += scipy.sparse.dia_matrix(
-        (np.ones(nodelist_len) * 1e-8, [0]), shape=(nodelist_len, nodelist_len)
-    )
+    if ground_nodes:
+        G += scipy.sparse.dia_matrix(
+            (np.ones(nodelist_len) * 1e-8, [0]), shape=(nodelist_len, nodelist_len)
+        )
 
     # Zero the drain node row
     G = G.tolil()
@@ -123,15 +125,15 @@ def _conductance_matrix_MNR(NWN: nx.Graph, drain_node: tuple):
     return G
 
 
-def conductance_matrix(NWN: nx.Graph, drain_node: tuple):
+def conductance_matrix(NWN: nx.Graph, drain_node: tuple, ground_nodes: bool = True):
     """
     Create the conductance matrix for a given NWN with a specified drain node.
 
     """
     if NWN.graph["type"] == "JDA":
-        return _conductance_matrix_JDA(NWN, drain_node[0])
+        return _conductance_matrix_JDA(NWN, drain_node[0], ground_nodes)
     elif NWN.graph["type"] == "MNR":
-        return _conductance_matrix_MNR(NWN, drain_node)
+        return _conductance_matrix_MNR(NWN, drain_node, ground_nodes)
     else:
         raise ValueError("Nanowire network has invalid type.")
 
