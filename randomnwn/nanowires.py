@@ -183,11 +183,9 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
         NWN.remove_node((i,))
 
         # Add edges between subnodes
-        D = NWN.graph["wire_diameter"]
-        rho = NWN.graph["wire_resistivity"]
+        D = NWN.graph["wire_diameter"]      # nm
+        rho = NWN.graph["wire_resistivity"] # nΩm
         for ind, next_ind in zip(ordering, ordering[1:]):
-
-            # wire resistance is seemingly way too large: ~500 ohms
             L = NWN.nodes[(i, ind)]["loc"].distance(NWN.nodes[(i, next_ind)]["loc"])
             wire_conductance = (np.pi/4 * D*D) / (rho * L * 1e3)
 

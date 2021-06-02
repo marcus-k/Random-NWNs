@@ -145,7 +145,8 @@ def solve_network(
     drain_node: tuple, 
     voltage: float,
     end_voltage: float = 0,
-    solver: str = "spsolve"
+    solver: str = "spsolve",
+    verbose: bool = False
 ) -> np.ndarray:
     """
     Solve for the voltages of each wire in a given NWN.
@@ -214,7 +215,7 @@ def solve_network(
         x = scipy.sparse.linalg.spsolve(A.tocsr(), z)
         return x
     elif solver == "lsqr":
-        x, *out = scipy.sparse.linalg.lsqr(A, z.toarray())
-        return x, out
+        x, *out = scipy.sparse.linalg.lsqr(A, z.toarray(), atol=1e-5)
+        return (x, out) if verbose else x
 
 
