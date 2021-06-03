@@ -95,6 +95,7 @@ def _conductance_matrix_JDA(NWN: nx.Graph, drain_node: int, ground_nodes: bool):
     # Zero the drain node row
     G = G.tolil()
     G[drain_node] = 0
+    G[:, drain_node] = 0
     G[drain_node, drain_node] = 1
 
     return G
@@ -121,6 +122,7 @@ def _conductance_matrix_MNR(NWN: nx.Graph, drain_node: tuple, ground_nodes: bool
     G = G.tolil()
     drain_node_index = nodelist.index(drain_node)
     G[drain_node_index] = 0
+    G[:, drain_node_index] = 0
     G[drain_node_index, drain_node_index] = 1
 
     return G
@@ -144,7 +146,6 @@ def solve_network(
     source_node: tuple, 
     drain_node: tuple, 
     voltage: float,
-    end_voltage: float = 0,
     solver: str = "spsolve",
     verbose: bool = False
 ) -> np.ndarray:
@@ -154,7 +155,7 @@ def solve_network(
     the drain node will be grounded.
     
     """
-    if solver not in ["spsolve", "lsqr"]:
+    if solver not in ["spsolve", "minres", "lgmres"]:
         raise ValueError("Solver is not a valid argument.")
 
     # Find node ordering and indexes
@@ -163,7 +164,8 @@ def solve_network(
     source_index = nodelist.index(source_node)
     drain_index = nodelist.index(drain_node)
 
-    ground_nodes = False if solver == "lsqr" else True
+    ground_nodes = False if solver == "minres" else True
+    ground_nodes = True
 
     # Calculate junction capacitances to determine shorted junctions
     M_C = capacitance_matrix(NWN, drain_node)
@@ -178,7 +180,6 @@ def solve_network(
 
     A = scipy.sparse.bmat([[M_C, B], [C, D]])
     z = scipy.sparse.dok_matrix((nodelist_len + 1, 1))
-    z[drain_index] = end_voltage
     z[-1] = voltage
 
     # Solve linear equations
@@ -196,26 +197,24 @@ def solve_network(
 
 
     # Solve the network only for the shorted junctions
-    G = conductance_matrix(NWN, drain_node, ground_nodes)
-
-    B = scipy.sparse.dok_matrix((nodelist_len, 1))
-    B[source_index, 0] = -1
-
-    C = -B.T
-
+    G = -conductance_matrix(NWN, drain_node, ground_nodes)
+    B = scipy.sparse.dok_matrix((nodelist_len, 1)); B[source_index, 0] = 1
+    C = B.T
     D = None
 
     A = scipy.sparse.bmat([[G, B], [C, D]])
     z = scipy.sparse.dok_matrix((nodelist_len + 1, 1))
-    z[drain_index] = end_voltage
     z[-1] = voltage
 
     # SparseEfficiencyWarning: spsolve requires A be CSC or CSR matrix format
     if solver == "spsolve":
         x = scipy.sparse.linalg.spsolve(A.tocsr(), z)
         return x
-    elif solver == "lsqr":
-        x, *out = scipy.sparse.linalg.lsqr(A, z.toarray(), atol=1e-5)
-        return (x, out) if verbose else x
+    elif solver == "minres":
+        x, exit_code = scipy.sparse.linalg.minres(A, z.toarray())
+        return x
+    elif solver == "lgmres":
+        x, exit_code = scipy.sparse.linalg.lgmres(A, z.toarray())
+        return x
 
 
