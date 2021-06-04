@@ -4,7 +4,7 @@
 # Functions to create nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   May 28, 2021
+# Date:   June 4, 2021
 
 from typing import List
 import numpy as np
@@ -165,30 +165,31 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
         if i in NWN.graph["electrode_list"]:
             continue
 
-        # Get junction attributes
-        junction_conductance = NWN.graph["junction_conductance"]
-        junction_capacitance = NWN.graph["junction_capacitance"]
-
         # Split nodes into subnodes representing the junctions on the wires
         for j, (edge, loc) in enumerate(junction_locs.items()):
+            # Find connecting node
             other_node = edge[~edge.index((i,))]
+
+            # Get old edge attributes
+            old_attributes = NWN.edges[edge]
+
+            # Create replacing MNR node and edge
             NWN.add_node((i, j), loc=loc, electrode=False)
-            NWN.add_edge(
-                (i, j), other_node, 
-                conductance = junction_conductance, 
-                is_shorted = junction_conductance,
-                capacitance = junction_capacitance, 
-                type = "junction"
-            )
+            NWN.add_edge((i, j), other_node, **old_attributes)
+
+        # Remove old JDA node
         NWN.remove_node((i,))
 
         # Add edges between subnodes
         D = NWN.graph["wire_diameter"]      # nm
         rho = NWN.graph["wire_resistivity"] # nΩm
+
         for ind, next_ind in zip(ordering, ordering[1:]):
+            # Find inner-wire resistance
             L = NWN.nodes[(i, ind)]["loc"].distance(NWN.nodes[(i, next_ind)]["loc"])
             wire_conductance = (np.pi/4 * D*D) / (rho * L * 1e3)
 
+            # Add inner-wire edge
             NWN.add_edge(
                 (i, ind), (i, next_ind), 
                 conductance = wire_conductance, 
@@ -313,7 +314,11 @@ def draw_NWN(
     return fig, ax
 
 
-def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
+def add_wires(
+    NWN: nx.Graph, lines: List[LineString], 
+    electrodes: List[bool], 
+    resistance: List[float] = None
+):
     """
     Adds wires to a given nanowire network.
 
@@ -332,6 +337,9 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
     electrodes : list of bool
         A list of boolean values specifying whether or not the corresponding
         nanowire in `lines` is an electrode.
+
+    resistance : float
+        Junction resistances of the added wires.
     
     """
     if NWN.graph["type"] == "MNR":
@@ -359,19 +367,13 @@ def add_wires(NWN: nx.Graph, lines: List[LineString], electrodes: List[bool]):
 
         # Find intersects
         intersect_dict = find_line_intersects(start_ind + i, NWN.graph["lines"])
-
-        # Custom contact junction conductances
-        # for ind in intersect_dict.keys():
-        #     conductance = NWN.graph["junction_conductance"]
-        #     if ind[0] in NWN.graph["electrode_list"] or ind[1] in NWN.graph["electrode_list"]:
-        #         conductance = 10 # contact conductance
-        #     NWN.add_edge(*ind, conductance=conductance)
         
-        # Uniform junction conductances
+        # Add edges to NWN
+        conductance = 1 / resistance if resistance is not None else NWN.graph["junction_conductance"]
         NWN.add_edges_from(
             [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
-            conductance = NWN.graph["junction_conductance"],
-            is_shorted = NWN.graph["junction_conductance"],
+            conductance = conductance,
+            is_shorted = conductance,
             capacitance = NWN.graph["junction_capacitance"],
             type = "junction"
         )

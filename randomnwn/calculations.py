@@ -4,7 +4,7 @@
 # Functions to solve nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   May 28, 2021
+# Date:   June 4, 2021
 
 import numpy as np
 import scipy
