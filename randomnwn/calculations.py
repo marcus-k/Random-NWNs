@@ -59,7 +59,7 @@ def create_matrix(
     # Ground every node with a huge resistor/tiny capacitor.
     if ground_nodes:
         M += scipy.sparse.dia_matrix(
-            (np.ones(nodelist_len) * 1e-8, [0]), shape=(nodelist_len, nodelist_len)
+            (np.ones(nodelist_len) * 1e-12, [0]), shape=(nodelist_len, nodelist_len)
         )
 
     # Zero the drain node row
@@ -73,7 +73,7 @@ def create_matrix(
     return M.tocsr()
 
 
-def _solver(A, z, solver):
+def _solver(A, z, solver, **kwargs):
     """
     Solve sparse matrix equation.
 
@@ -81,11 +81,13 @@ def _solver(A, z, solver):
     x = None
 
     if solver == "spsolve":
-        x = scipy.sparse.linalg.spsolve(A.tocsr(), z)
+        x = scipy.sparse.linalg.spsolve(A.tocsr(), z, **kwargs)
     elif solver == "minres":
-        x, exit_code = scipy.sparse.linalg.minres(A, z.toarray())
+        x, exit_code = scipy.sparse.linalg.minres(A, z.toarray(), **kwargs)
     elif solver == "lgmres":
-        x, exit_code = scipy.sparse.linalg.lgmres(A, z.toarray())
+        x, exit_code = scipy.sparse.linalg.lgmres(A, z.toarray(), **kwargs)
+    elif solver == "gcrotmk":
+        x, exit_code = scipy.sparse.linalg.gcrotmk(A, z.toarray(), **kwargs)
     else:
         raise ValueError("Invalid solver.")
 
@@ -97,7 +99,8 @@ def _solve_voltage(
     voltage: float, 
     source_node: tuple, 
     drain_node: tuple,
-    solver: str
+    solver: str,
+    **kwargs
 ) -> np.ndarray:
     """
     Solve for voltages at all the nodes for a given supplied voltage.
@@ -119,7 +122,7 @@ def _solve_voltage(
     z = scipy.sparse.dok_matrix((nodelist_len + 1, 1))
     z[-1] = voltage
 
-    out = _solver(A, z, solver)
+    out = _solver(A, z, solver, **kwargs)
     return np.array(out, copy=False)
 
 
@@ -128,7 +131,8 @@ def _solve_current(
     current: float, 
     source_node: tuple, 
     drain_node: tuple,
-    solver: str
+    solver: str,
+    **kwargs
 ) -> np.ndarray:
     """
     Solve for voltages at all the nodes for a given supplied current.
@@ -145,7 +149,7 @@ def _solve_current(
     z = scipy.sparse.dok_matrix((nodelist_len, 1))
     z[source_index] = current
 
-    out = _solver(G, z, solver)
+    out = _solver(G, z, solver, **kwargs)
     return np.array(out, copy=False)
 
 
@@ -155,7 +159,8 @@ def solve_network(
     drain_node: tuple, 
     input: float,
     type: str = "voltage",
-    solver: str = "spsolve"
+    solver: str = "spsolve",
+    **kwargs
 ) -> np.ndarray:
     """
     Solve for the voltages of each node in a given NWN. 
@@ -182,6 +187,9 @@ def solve_network(
     solver: str, optional
         Name of sparse matrix solving algorithm to use.
         Default: "spsolve".
+
+    **kwargs
+        Keyword arguments passed to the solver.
 
     Returns
     -------
@@ -224,9 +232,9 @@ def solve_network(
     out = None
 
     if type == "voltage":
-        out = _solve_voltage(NWN, input, source_node, drain_node, solver)
+        out = _solve_voltage(NWN, input, source_node, drain_node, solver, **kwargs)
     elif type == "current":
-        out = _solve_current(NWN, input, source_node, drain_node, solver)
+        out = _solve_current(NWN, input, source_node, drain_node, solver, **kwargs)
     else:
         raise ValueError("Invalid type.")
 
