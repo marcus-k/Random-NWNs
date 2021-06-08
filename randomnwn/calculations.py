@@ -4,7 +4,7 @@
 # Functions to solve nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   June 4, 2021
+# Date:   June 8, 2021
 
 import numpy as np
 import scipy
@@ -46,7 +46,7 @@ def create_matrix(
     """
     TYPES = ["conductance", "capacitance"]
     if type not in TYPES:
-        raise ValueError("Invalid type.")
+        raise ValueError("Invalid matrix type.")
 
     if type == "conductance":
         type = "is_shorted"
@@ -62,7 +62,7 @@ def create_matrix(
             (np.ones(nodelist_len) * 1e-12, [0]), shape=(nodelist_len, nodelist_len)
         )
 
-    # Zero the drain node row
+    # Zero the drain node row and column
     if drain_node is not None:
         M = M.tolil()
         drain_index = nodelist.index(drain_node)
@@ -229,14 +229,12 @@ def solve_network(
 
 
     # Solve the network
-    out = None
-
     if type == "voltage":
         out = _solve_voltage(NWN, input, source_node, drain_node, solver, **kwargs)
     elif type == "current":
         out = _solve_current(NWN, input, source_node, drain_node, solver, **kwargs)
     else:
-        raise ValueError("Invalid type.")
+        raise ValueError("Invalid source type.")
 
     return out
 
