@@ -6,7 +6,8 @@
 # Author: Marcus Kasdorf
 # Date:   June 4, 2021
 
-from typing import List
+from typing import List, Union
+from numbers import Number
 import numpy as np
 from shapely.geometry import LineString
 import networkx as nx
@@ -16,8 +17,8 @@ from .line_functions import *
 
 
 def create_NWN(
-    wire_length: float = 7.0, 
-    width: float = 50.0, 
+    wire_length: float = 7.0,
+    size: Union[tuple, float] = 50.0,
     density: float = 0.3, 
     seed: int = None,
     conductance: float = 0.1,
@@ -42,9 +43,10 @@ def create_NWN(
     wire_length : float, optional
         Length of each nanowire. Given in micrometers.
 
-    width : float, optional
-        Side length of the area of which the nanowires lie. 
-        Given in micrometers.
+    size : tuple or float
+        The size of the nanowire network given in micrometers. If a tuple is
+        given, it is assumed to be (x-length, y-length). If a number is passed,
+        both dimensions will have the same length.
 
     density : float, optional
         Density of nanowires in the area determined by the width.
@@ -77,14 +79,24 @@ def create_NWN(
         The created random nanowire network.
 
     """
+    # Convert size to length and width, size will be the area
+    if isinstance(size, tuple):
+        length, width = size
+        size = size[0] * size[1]
+    elif isinstance(size, Number):
+        length, width = size, size
+        size = size * size
+    else:
+        raise ValueError("Invalid size type.")
+
     # Get closest density with an integer number of wires.
-    size = width * width
     wire_num = round(size * density)
     density = wire_num / size
 
     # Create NWN graph
     NWN = nx.Graph(
-        wire_length = wire_length, 
+        wire_length = wire_length,
+        length = length,
         width = width, 
         size = size,
         wire_density = density, 
@@ -105,7 +117,7 @@ def create_NWN(
     # Add the wires as nodes to the graph
     for i in range(NWN.graph["wire_num"]):
         NWN.graph["lines"].append(create_line(
-            NWN.graph["wire_length"], xmax=NWN.graph["width"], ymax=NWN.graph["width"], rng=rng
+            NWN.graph["wire_length"], xmax=NWN.graph["length"], ymax=NWN.graph["width"], rng=rng
         ))
         NWN.add_node((i,), electrode=False)
         
