@@ -78,8 +78,6 @@ def _solver(A, z, solver, **kwargs):
     Solve sparse matrix equation.
 
     """
-    x = None
-
     if solver == "spsolve":
         x = scipy.sparse.linalg.spsolve(A.tocsr(), z, **kwargs)
     elif solver == "minres":

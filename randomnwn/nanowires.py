@@ -4,7 +4,7 @@
 # Functions to create nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   June 7, 2021
+# Date:   June 8, 2021
 
 from typing import List, Union
 from numbers import Number
@@ -47,7 +47,7 @@ def create_NWN(
         The size of the nanowire network given in micrometers. If a tuple is
         given, it is assumed to be (x-length, y-length). If a number is passed,
         both dimensions will have the same length. The x direction is labeled
-        `length`, while the y direction is labeled width.
+        `length`, while the y direction is labeled `width`.
 
     density : float, optional
         Density of nanowires in the area determined by the width.
