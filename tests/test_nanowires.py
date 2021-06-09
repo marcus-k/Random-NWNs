@@ -6,7 +6,7 @@ from networkx import single_source_dijkstra
 def NWN():
     out = create_NWN(
         wire_length = 7.0,
-        width = 50.0,
+        size = 50.0,
         density = 0.3,
         seed = 123
     )
