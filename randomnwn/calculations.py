@@ -11,10 +11,13 @@ import scipy
 import networkx as nx
 from networkx.linalg import laplacian_matrix
 
+from .nanowires import get_connected_nodes
+
 
 def create_matrix(
     NWN: nx.Graph,
-    type: str = "conductance",
+    value_type: str = "conductance",
+    source_node: tuple = None,
     drain_node: tuple = None,
     ground_nodes: bool = False
 ) -> scipy.sparse.csr_matrix: 
@@ -26,8 +29,12 @@ def create_matrix(
     NWN : Graph
         Nanowire network.
 
-    type : {"conductance", "capacitance"}, optional
+    value_type : {"conductance", "capacitance"}, optional
         Weight to use for the Laplacian matrix.
+
+    source_node : tuple, optional
+        Only needed if ground_nodes is True to find which nodes are to be
+        grounded.
 
     drain_node : tuple, optional
         If a drain node is supplied, the row and column corresponding to 
@@ -45,27 +52,39 @@ def create_matrix(
 
     """
     TYPES = ["conductance", "capacitance"]
-    if type not in TYPES:
+    if value_type not in TYPES:
         raise ValueError("Invalid matrix type.")
 
-    if type == "conductance":
-        type = "is_shorted"
+    if value_type == "conductance":
+        value_type = "is_shorted"
 
     # Get Laplacian matrix
-    nodelist = sorted(NWN.nodes())
+    nodelist = NWN.graph["node_indices"].keys()
     nodelist_len = len(nodelist)
-    M = laplacian_matrix(NWN, nodelist=nodelist, weight=type)
+    M = laplacian_matrix(NWN, nodelist=nodelist, weight=value_type)
 
     # Ground every node with a huge resistor/tiny capacitor.
     if ground_nodes:
+        # Get list of node indices which are not not connected to an electrode
+        unconnected_indices = list(set(NWN.graph["node_indices"].values()).difference(
+            set(NWN.graph["node_indices"][node] for node in 
+                get_connected_nodes(NWN, [source_node, drain_node])
+            )
+        ))
+
+        tmp = np.zeros(nodelist_len)
+        tmp[unconnected_indices] = 1e-12
+
+        # Add small value to diagonal, grounding all non-connected nodes
         M += scipy.sparse.dia_matrix(
-            (np.ones(nodelist_len) * 1e-12, [0]), shape=(nodelist_len, nodelist_len)
+            (tmp, [0]), 
+            shape = (nodelist_len, nodelist_len)
         )
 
     # Zero the drain node row and column
     if drain_node is not None:
         M = M.tolil()
-        drain_index = nodelist.index(drain_node)
+        drain_index = NWN.graph["node_indices"][drain_node]
         M[drain_index] = 0
         M[:, drain_index] = 0
         M[drain_index, drain_index] = 1
@@ -105,13 +124,13 @@ def _solve_voltage(
 
     """
     # Find node ordering and indexes
-    nodelist = sorted(NWN.nodes())
+    nodelist = NWN.graph["node_indices"].keys()
     nodelist_len = len(nodelist)
-    source_index = nodelist.index(source_node)
+    source_index = NWN.graph["node_indices"][source_node]
 
     ground_nodes = True if solver == "spsolve" else False
 
-    G = -create_matrix(NWN, "conductance", drain_node, ground_nodes)
+    G = -create_matrix(NWN, "conductance", source_node, drain_node, ground_nodes)
     B = scipy.sparse.dok_matrix((nodelist_len, 1)); B[source_index, 0] = 1
     C = B.T
     D = None
@@ -137,13 +156,13 @@ def _solve_current(
 
     """
     # Find node ordering and indexes
-    nodelist = sorted(NWN.nodes())
+    nodelist = NWN.graph["node_indices"].keys()
     nodelist_len = len(nodelist)
-    source_index = nodelist.index(source_node)
+    source_index = NWN.graph["node_indices"][source_node]
 
     ground_nodes = True if solver == "spsolve" else False
 
-    G = create_matrix(NWN, "conductance", drain_node, ground_nodes)
+    G = create_matrix(NWN, "conductance", source_node, drain_node, ground_nodes)
     z = scipy.sparse.dok_matrix((nodelist_len, 1))
     z[source_index] = current
 

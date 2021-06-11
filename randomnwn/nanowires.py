@@ -6,7 +6,7 @@
 # Author: Marcus Kasdorf
 # Date:   June 8, 2021
 
-from typing import List, Union
+from typing import List, Union, Tuple, Set
 from numbers import Number
 import numpy as np
 from shapely.geometry import LineString
@@ -109,7 +109,7 @@ def create_NWN(
         break_voltage = break_voltage,
         electrode_list = [],
         lines = [],
-        type = "JDA"
+        type = "JDA",
     )
 
     # Create seeded random generator for testing
@@ -118,11 +118,14 @@ def create_NWN(
     # Add the wires as nodes to the graph
     for i in range(NWN.graph["wire_num"]):
         NWN.graph["lines"].append(create_line(
-            NWN.graph["wire_length"], xmax=NWN.graph["length"], ymax=NWN.graph["width"], rng=rng
+            NWN.graph["wire_length"], 
+            xmax = NWN.graph["length"], 
+            ymax = NWN.graph["width"], 
+            rng = rng
         ))
         NWN.add_node((i,), electrode=False)
         
-    # Find intersects
+    # Find intersects and create the edges (junctions)
     intersect_dict = find_intersects(NWN.graph["lines"])
     NWN.add_edges_from(
         [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
@@ -135,6 +138,11 @@ def create_NWN(
     
     # Find junction density
     NWN.graph["junction_density"] = len(intersect_dict) / size
+
+    # Create index lookup
+    NWN.graph["node_indices"] = {
+        node: ind for ind, node in enumerate(sorted(NWN.nodes()))
+    }
 
     return NWN
 
@@ -175,7 +183,7 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
         )
 
         # If wire is electrode, move on to the next wire
-        if i in NWN.graph["electrode_list"]:
+        if (i,) in NWN.graph["electrode_list"]:
             continue
 
         # Split nodes into subnodes representing the junctions on the wires
@@ -210,6 +218,11 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
                 capacitance = 0, 
                 type = "inner"
             )
+
+    # Update index lookup
+    NWN.graph["node_indices"] = {
+        node: ind for ind, node in enumerate(sorted(NWN.nodes()))
+    }
 
 
 def plot_NWN(NWN, intersections=True, rnd_color=False):
@@ -253,7 +266,7 @@ def plot_NWN(NWN, intersections=True, rnd_color=False):
             ax.plot(*np.array(NWN.graph["lines"][i]).T)
     else:
         for i in range(NWN.graph["wire_num"]):
-            if i in NWN.graph["electrode_list"]:
+            if (i,) in NWN.graph["electrode_list"]:
                 ax.plot(*np.array(NWN.graph["lines"][i]).T, c="xkcd:light blue")
             else:
                 ax.plot(*np.array(NWN.graph["lines"][i]).T, c="pink")
@@ -376,7 +389,7 @@ def add_wires(
         )
         
         if electrodes[i]:
-            NWN.graph["electrode_list"].append(start_ind + i)
+            NWN.graph["electrode_list"].append((start_ind + i,))
 
         # Find intersects
         intersect_dict = find_line_intersects(start_ind + i, NWN.graph["lines"])
@@ -391,6 +404,9 @@ def add_wires(
             type = "junction"
         )
         NWN.graph["loc"].update(intersect_dict)
+
+        # Update index lookup
+        NWN.graph["node_indices"].update({(start_ind + i,): start_ind + i})
 
     # Update wire density
     NWN.graph["wire_density"] = (NWN.graph["wire_num"] - len(NWN.graph["electrode_list"])) / NWN.graph["size"]
@@ -408,3 +424,15 @@ def set_junction_resistance(NWN: nx.Graph, R: float):
         } for edge in NWN.edges() if NWN.edges[edge]["type"] == "junction"
     }
     nx.set_edge_attributes(NWN, attrs)
+
+
+def get_connected_nodes(NWN: nx.Graph, connected: List[Tuple]) -> Set[Tuple]:
+    """
+    Returns a list of nodes which are connected to the given list.
+
+    """
+    nodelist = set()
+    for subset in nx.connected_components(NWN):
+        if any(node in subset for node in connected):
+            nodelist = nodelist.union(subset)
+    return nodelist
