@@ -55,9 +55,6 @@ def create_matrix(
     if value_type not in TYPES:
         raise ValueError("Invalid matrix type.")
 
-    if value_type == "conductance":
-        value_type = "is_shorted"
-
     # Get Laplacian matrix
     nodelist = NWN.graph["node_indices"].keys()
     nodelist_len = len(nodelist)
@@ -215,37 +212,6 @@ def solve_network(
         is voltage, the current is also in this array.
         
     """
-
-    # # Calculate junction capacitances to determine shorted junctions
-    # M_C = capacitance_matrix(NWN, drain_node)
-
-    # # Create block matrix to solve network for voltage and charge
-    # B = scipy.sparse.dok_matrix((nodelist_len, 1))
-    # B[source_index, 0] = -1
-
-    # C = -B.T
-
-    # D = None
-
-    # A = scipy.sparse.bmat([[M_C, B], [C, D]])
-    # z = scipy.sparse.dok_matrix((nodelist_len + 1, 1))
-    # z[-1] = voltage
-
-    # # Solve linear equations
-    # *voltage_list, charge = scipy.sparse.linalg.spsolve(A.tocsr(), z)
-
-
-    # # Stored activation data in edges
-    # for node1, node2 in NWN.edges():
-    #     node1_ind = nodelist.index(node1)
-    #     node2_ind = nodelist.index(node2)
-    #     voltage_drop = abs(voltage_list[node1_ind] - voltage_list[node2_ind])
-        
-    #     if voltage_drop < NWN.graph["break_voltage"]:
-    #         NWN.edges[(node1, node2)]["is_shorted"] = 0
-
-
-    # Solve the network
     if type == "voltage":
         out = _solve_voltage(NWN, input, source_node, drain_node, solver, **kwargs)
     elif type == "current":

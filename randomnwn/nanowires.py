@@ -130,7 +130,6 @@ def create_NWN(
     NWN.add_edges_from(
         [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
         conductance = conductance,
-        is_shorted = conductance,
         capacitance = capacitance,
         type = "junction"
     )
@@ -214,7 +213,6 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
             NWN.add_edge(
                 (i, ind), (i, next_ind), 
                 conductance = wire_conductance, 
-                is_shorted = wire_conductance,
                 capacitance = 0, 
                 type = "inner"
             )
@@ -399,7 +397,6 @@ def add_wires(
         NWN.add_edges_from(
             [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
             conductance = conductance,
-            is_shorted = conductance,
             capacitance = NWN.graph["junction_capacitance"],
             type = "junction"
         )
@@ -420,7 +417,7 @@ def set_junction_resistance(NWN: nx.Graph, R: float):
     NWN.graph["junction_conductance"] = 1 / R
     attrs = {
         edge: {
-            "conductance": 1 / R, "is_shorted": 1 / R
+            "conductance": 1 / R
         } for edge in NWN.edges() if NWN.edges[edge]["type"] == "junction"
     }
     nx.set_edge_attributes(NWN, attrs)
