@@ -10,8 +10,19 @@ import numpy as np
 import scipy
 import networkx as nx
 from networkx.linalg import laplacian_matrix
+from typing import List, Tuple, Set
 
-from .nanowires import get_connected_nodes
+
+def get_connected_nodes(NWN: nx.Graph, connected: List[Tuple]) -> Set[Tuple]:
+    """
+    Returns a list of nodes which are connected to the given list.
+
+    """
+    nodelist = set()
+    for subset in nx.connected_components(NWN):
+        if any(node in subset for node in connected):
+            nodelist = nodelist.union(subset)
+    return nodelist
 
 
 def create_matrix(
