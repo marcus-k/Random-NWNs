@@ -165,8 +165,8 @@ def _solve_voltage(
 def _solve_current(    
     NWN: nx.Graph, 
     current: float, 
-    source_nodes: tuple, 
-    drain_nodes: tuple,
+    source_nodes: List[Tuple], 
+    drain_nodes: List[Tuple],
     solver: str,
     **kwargs
 ) -> np.ndarray:
