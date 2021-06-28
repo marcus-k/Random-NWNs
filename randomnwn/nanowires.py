@@ -6,7 +6,7 @@
 # Author: Marcus Kasdorf
 # Date:   June 18, 2021
 
-from typing import List, Union, Callable
+from typing import List, Union
 from numbers import Number
 import numpy as np
 from shapely.geometry import LineString
@@ -26,7 +26,6 @@ def create_NWN(
     diameter: float = 50.0,
     resistivity: float = 22.6,
     break_voltage: float = -1,
-    resistance_func: Callable = HP_resistance
 ) -> nx.Graph:
     """
     Create a nanowire network stored in a networkx graph. The wires are the 
@@ -75,10 +74,6 @@ def create_NWN(
         The voltage at which junctions switch from behaving like capacitors
         to resistors. Given in volts.
 
-    resistance_func : function, optional
-        The resistance function used for each nanowire junction when evolving
-        the nanowire network.
-
     Returns
     -------
     NWN : Graph
@@ -115,6 +110,9 @@ def create_NWN(
         electrode_list = [],
         lines = [],
         type = "JDA",
+        R_on = 10,
+        R_off = 1600,
+        mu = 1,
     )
 
     # Create seeded random generator for testing
@@ -136,6 +134,7 @@ def create_NWN(
         [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
         conductance = conductance,
         capacitance = capacitance,
+        w = 0.0,
         type = "junction"
     )
     NWN.graph["loc"] = intersect_dict
@@ -218,7 +217,7 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
             NWN.add_edge(
                 (i, ind), (i, next_ind), 
                 conductance = wire_conductance, 
-                capacitance = 0, 
+                capacitance = 0,
                 type = "inner"
             )
 
@@ -289,6 +288,7 @@ def add_wires(
             [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
             conductance = conductance,
             capacitance = NWN.graph["junction_capacitance"],
+            w = 0.0,
             type = "junction"
         )
         NWN.graph["loc"].update(intersect_dict)
@@ -300,15 +300,15 @@ def add_wires(
     NWN.graph["wire_density"] = (NWN.graph["wire_num"] - len(NWN.graph["electrode_list"])) / NWN.graph["size"]
 
 
-def set_junction_resistance(NWN: nx.Graph, R: float):
-    """
-    Sets the junction resistance for a given nanowire network.
-
-    """
-    NWN.graph["junction_conductance"] = 1 / R
-    attrs = {
-        edge: {
-            "conductance": 1 / R
-        } for edge in NWN.edges() if NWN.edges[edge]["type"] == "junction"
-    }
-    nx.set_edge_attributes(NWN, attrs)
+# def set_junction_resistance(NWN: nx.Graph, R: float):
+#     """
+#     Sets the junction resistance for a given nanowire network.
+#
+#     """
+#     NWN.graph["junction_conductance"] = 1 / R
+#     attrs = {
+#         edge: {
+#             "conductance": 1 / R
+#         } for edge in NWN.edges() if NWN.edges[edge]["type"] == "junction"
+#     }
+#     nx.set_edge_attributes(NWN, attrs)
