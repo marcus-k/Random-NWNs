@@ -116,7 +116,6 @@ def draw_NWN(
         else:
             kwargs.update({"with_labels": True})
 
-
         nx.draw(NWN, ax=ax, node_size=40, font_size=font_size, edge_color="r", **kwargs)
 
     else:

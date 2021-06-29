@@ -322,17 +322,3 @@ def add_wires(
 
     # Update wire density
     NWN.graph["wire_density"] = (NWN.graph["wire_num"] - len(NWN.graph["electrode_list"])) / NWN.graph["size"]
-
-
-# def set_junction_resistance(NWN: nx.Graph, R: float):
-#     """
-#     Sets the junction resistance for a given nanowire network.
-#
-#     """
-#     NWN.graph["junction_conductance"] = 1 / R
-#     attrs = {
-#         edge: {
-#             "conductance": 1 / R
-#         } for edge in NWN.edges() if NWN.edges[edge]["type"] == "junction"
-#     }
-#     nx.set_edge_attributes(NWN, attrs)
