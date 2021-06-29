@@ -4,7 +4,7 @@
 # Functions to solve nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   June 8, 2021
+# Date:   June 29, 2021
 
 import numpy as np
 import scipy
@@ -199,8 +199,8 @@ def solve_network(
 ) -> np.ndarray:
     """
     Solve for the voltages of each node in a given NWN. 
-    The drain node will be grounded. If the type is voltage, 
-    the source node will be the input voltage.
+    Each drain node will be grounded. If the type is voltage, 
+    each source node will be at the specified input voltage.
 
     Parameters
     ----------
@@ -230,7 +230,7 @@ def solve_network(
     -------
     out : ndarray
         Output array containing the voltages of each node. If the input type
-        is voltage, the current is also in this array.
+        is voltage, the current is also in this array as the last element.
         
     """
     # Get lists of source and drain nodes

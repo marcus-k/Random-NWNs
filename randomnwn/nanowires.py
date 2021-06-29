@@ -4,7 +4,7 @@
 # Functions to create nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   June 18, 2021
+# Date:   June 29, 2021
 
 from typing import List, Union
 from numbers import Number
@@ -28,13 +28,13 @@ def create_NWN(
     break_voltage: float = -1,
 ) -> nx.Graph:
     """
-    Create a nanowire network stored in a networkx graph. The wires are the 
-    graph's vertices, while the wire junctions are represented by the edges.
+    Create a nanowire network represented by a NetworkX graph. The wires are 
+    the graph's vertices, while the wire junctions are represented by the edges.
 
-    The nanowire network started in the junction-dominated assumption, but
-    can be converted to the multi-nodal representation after creation. 
+    The nanowire network starts in the junction-dominated assumption (JDA), but
+    can be converted to the multi-nodal representation (MNR) after creation. 
 
-    The density might not be attainable with the given size as there can only 
+    The density might not be attainable with the given size, as there can only 
     be a integer number of wires. Thus, the closest density to an integer 
     number of wires is used.
 
@@ -43,7 +43,7 @@ def create_NWN(
     wire_length : float, optional
         Length of each nanowire. Given in micrometers.
 
-    size : tuple or float
+    size : 2-tuple or float
         The size of the nanowire network given in micrometers. If a tuple is
         given, it is assumed to be (x-length, y-length). If a number is passed,
         both dimensions will have the same length. The x direction is labeled
@@ -152,8 +152,7 @@ def create_NWN(
 
 def convert_NWN_to_MNR(NWN: nx.Graph):
     """
-    Converts a NWN in-place from the junction-dominated assumption to the 
-    multi-nodal representation.
+    Converts a JDA NWN to an MNR NWN in-place.
 
     Parameters
     ----------
@@ -228,9 +227,10 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
 
 
 def add_wires(
-    NWN: nx.Graph, lines: List[LineString], 
+    NWN: nx.Graph, 
+    lines: List[LineString], 
     electrodes: List[bool], 
-    resistance: List[float] = None
+    resistance: float = None
 ):
     """
     Adds wires to a given nanowire network.
@@ -245,17 +245,17 @@ def add_wires(
         Nanowire network to add wires to.
 
     lines : list of LineStrings
-        A list of shapely LineStrings, representing nanowires, to be added.
+        A list of Shapely LineStrings, representing nanowires, to be added.
 
     electrodes : list of bool
         A list of boolean values specifying whether or not the corresponding
         nanowire in `lines` is an electrode.
 
-    resistance : float
+    resistance : float, optional
         Junction resistances of the added wires.
     
     """
-    if NWN.graph["type"] == "MNR":
+    if NWN.graph["type"] != "JDA":
         raise NotImplementedError()
 
     new_wire_num = len(lines)
