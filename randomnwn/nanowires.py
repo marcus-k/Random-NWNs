@@ -16,6 +16,30 @@ from .line_functions import *
 from .dynamics import *
 
 
+def set_characteristic_units(NWN: nx.graph, **kwargs):
+    """
+    Sets the characteristic units of a nanowire network.
+
+    """
+
+    # Base units
+    units = {
+        "v0": 1.0,          # V, Voltage
+        "Ron": 10.0,        # Ω, ON junction resistance
+        "l0": 7.0,          # um, Wire length
+        "D0": 50.0,         # nm, Wire diameter
+        "D": 10.0,          # nm, Junction length (2x Wire coating thickness)
+        "u0": 1.0           # ?, Ion mobility
+    }
+
+    # Derived units
+    units["i0"] = units["v0"] / units["Ron"]                    # A, Current
+    units["t0"] = units["D"]**2 / (units["u0"] * units["v0"])   # ?, Time
+
+    # Add to NWN
+    NWN.graph["units"] = units
+
+
 def create_NWN(
     wire_length: float = 7.0,
     size: Union[tuple, float] = 50.0,
