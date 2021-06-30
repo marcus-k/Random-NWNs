@@ -15,21 +15,26 @@ from scipy.integrate import solve_ivp
 from .calculations import solve_network
 
 
-def HP_resistance(w: np.ndarray, R_on: float, R_off: float, D: float) -> np.ndarray:
+def resist_func(NWN: nx.Graph, w: np.ndarray) -> np.ndarray:
     """
-    The HP group's resistance.
+    The HP group's resistance function in nondimensionalized form.
 
     Parameters
     ----------
-    w : ndarray
-        State variable of the memristor(s).
+    NWN : Graph
+        Nanowire network.
+
+    w : ndarray or scalar
+        Nondimensionalized state variable of the memristor element(s).
 
     Returns
     -------
-    R : ndarray
-        Resistance of the memristor(s).
+    R : ndarray or scalar
+        Resistance of the memristor element(s).
+
     """
-    R = (w / D) * (R_on - R_off) + R_off
+    Roff_Ron = NWN.graph["units"]["Roff_Ron"]
+    R = w * (1 - Roff_Ron) + Roff_Ron
     return R
 
 
@@ -45,29 +50,23 @@ def deriv(
     kwargs: dict = None
 ) -> np.ndarray:
     """
-    Derivative of the state variables `w`.
+    Derivative of the nondimensionalized state variables `w`.
 
     """
     if kwargs is None:
         kwargs = dict()
 
-    # Get parameters
-    R_on = NWN.graph["R_on"]
-    R_off = NWN.graph["R_off"]
-    mu = NWN.graph["mu"]
-    D = 1
-
-    # Solve for resistances
-    R = HP_resistance(w, R_on, R_off, D)
+    # Solve for and set resistances
+    R = resist_func(NWN, w)
     attrs = {
-        edge: {"conductance": 1 / R[i]} for i, edge in enumerate(edge_list)
+        edge: {"conductance": 1 / R[i]} for i, edge in enumerate(edge_list)   
     }
     nx.set_edge_attributes(NWN, attrs)
 
     # Find applied voltage at the current time
     applied_V = voltage_func(t)
 
-    # Solve for voltages
+    # Solve for voltage at each node
     *V, I = solve_network(
         NWN, source_node, drain_node, applied_V, 
         "voltage", solver, **kwargs
@@ -84,7 +83,7 @@ def deriv(
     V_delta = np.abs(v0 - v1) * np.sign(applied_V)
         
     # Find dw/dt
-    dwdt = mu * (R_on / D) * V_delta / R
+    dwdt = V_delta / R
 
     return dwdt
 
