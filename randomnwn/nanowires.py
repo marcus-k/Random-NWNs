@@ -4,7 +4,7 @@
 # Functions to create nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   June 29, 2021
+# Date:   June 30, 2021
 
 from typing import List, Union
 from numbers import Number
@@ -16,21 +16,26 @@ from .line_functions import *
 from .dynamics import *
 
 
-def set_characteristic_units(NWN: nx.graph, **kwargs):
+def set_characteristic_units(NWN: nx.Graph, **kwargs):
     """
     Sets the characteristic units of a nanowire network.
 
     """
 
     # Base units
-    units = {
+    units = {               # Unit, Description
         "v0": 1.0,          # V, Voltage
         "Ron": 10.0,        # Ω, ON junction resistance
         "l0": 7.0,          # um, Wire length
         "D0": 50.0,         # nm, Wire diameter
         "D": 10.0,          # nm, Junction length (2x Wire coating thickness)
-        "u0": 1.0           # ?, Ion mobility
+        "rho0": 22.6,       # nΩm, Wire resistivity
+        "u0": 1.0,          # ?, Ion mobility
+        "Roff_Ron": 160     # none, Off-On Resistance ratio
     }
+
+    # Add overrides
+    units.update(kwargs)
 
     # Derived units
     units["i0"] = units["v0"] / units["Ron"]                    # A, Current
@@ -41,24 +46,25 @@ def set_characteristic_units(NWN: nx.graph, **kwargs):
 
 
 def create_NWN(
-    wire_length: float = 7.0,
-    size: Union[tuple, float] = 50.0,
-    density: float = 0.3, 
+    wire_length: float = (7.0 / 7),
+    size: Union[tuple, float] = (50.0 / 7),
+    density: float = (0.3 * 7**2), 
     seed: int = None,
-    conductance: float = 0.1,
+    conductance: float = (0.1 / 0.1),
     capacitance: float = 1000,
-    diameter: float = 50.0,
-    resistivity: float = 22.6,
+    diameter: float = (50.0 / 50.0),
+    resistivity: float = (22.6 / 22.6),
     break_voltage: float = -1,
 ) -> nx.Graph:
     """
-    Create a nanowire network represented by a NetworkX graph. The wires are 
-    the graph's vertices, while the wire junctions are represented by the edges.
+    Create a nanowire network represented by a NetworkX graph. Wires are 
+    represented by the graph's vertices, while the wire junctions are 
+    represented by the graph's edges.
 
     The nanowire network starts in the junction-dominated assumption (JDA), but
     can be converted to the multi-nodal representation (MNR) after creation. 
 
-    The density might not be attainable with the given size, as there can only 
+    The density may not be attainable with the given size, as there can only 
     be a integer number of wires. Thus, the closest density to an integer 
     number of wires is used.
 
@@ -139,6 +145,9 @@ def create_NWN(
         mu = 1,
     )
 
+    # Add scaling units
+    set_characteristic_units(NWN)
+
     # Create seeded random generator for testing
     rng = np.random.default_rng(seed)
 
@@ -189,6 +198,11 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
         return
 
     NWN.graph["type"] = "MNR"
+    l0 = NWN.graph["units"]["l0"]
+    rho0 = NWN.graph["units"]["rho0"]
+    Ron = NWN.graph["units"]["Ron"]
+    D0 = NWN.graph["units"]["D0"]
+    A0 = np.pi/4 * D0*D0
 
     for i in range(NWN.graph["wire_num"]):
         # Get the junctions for a wire
@@ -234,7 +248,7 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
         for ind, next_ind in zip(ordering, ordering[1:]):
             # Find inner-wire resistance
             L = NWN.nodes[(i, ind)]["loc"].distance(NWN.nodes[(i, next_ind)]["loc"])
-            wire_conductance = (np.pi/4 * D*D) / (rho * L * 1e3)
+            wire_conductance = (Ron * A0) / (rho0 * l0 * L * 1e3)
 
             # Add inner-wire edge
             NWN.add_edge(
@@ -280,7 +294,7 @@ def add_wires(
     
     """
     if NWN.graph["type"] != "JDA":
-        raise NotImplementedError()
+        raise NotImplementedError("Only JDA is currently supported")
 
     new_wire_num = len(lines)
 

@@ -4,7 +4,7 @@
 # Functions to solve nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   June 29, 2021
+# Date:   June 30, 2021
 
 import numpy as np
 import scipy
@@ -249,4 +249,26 @@ def solve_network(
 
     return out
 
+
+def scale_sol(NWN: nx.Graph, sol: np.ndarray):
+    """
+    Scale the voltage and current solutions by their characteristic values.
+
+    """
+    # Get parameters
+    out = np.copy(sol)
+    v0 = NWN.graph["units"]["v0"]
+    i0 = NWN.graph["units"]["i0"]
+    node_num = len(NWN.graph["node_indices"])
+
+    # Current sources
+    if node_num == len(sol):
+        out *= v0
+
+    # Voltage sources
+    else:
+        out[:node_num] *= v0
+        out[node_num:] *= i0
+
+    return out
 
