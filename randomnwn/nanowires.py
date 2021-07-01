@@ -14,6 +14,7 @@ import networkx as nx
 
 from .line_functions import *
 from .dynamics import *
+from .units import default_units
 
 
 def set_characteristic_units(NWN: nx.Graph, **kwargs):
@@ -21,27 +22,8 @@ def set_characteristic_units(NWN: nx.Graph, **kwargs):
     Sets the characteristic units of a nanowire network.
 
     """
-
-    # Base units
-    units = {               # Unit, Description
-        "v0": 1.0,          # V, Voltage
-        "Ron": 10.0,        # Ω, ON junction resistance
-        "l0": 7.0,          # um, Wire length
-        "D0": 50.0,         # nm, Wire diameter
-        "D": 10.0,          # nm, Junction length (2x Wire coating thickness)
-        "rho0": 22.6,       # nΩm, Wire resistivity
-        "u0": 1e-2,         # um^2 s^-1 V^-1, Ion mobility
-        "Roff_Ron": 160     # none, Off-On Resistance ratio
-    }
-
-    # Add overrides
+    units = default_units()
     units.update(kwargs)
-
-    # Derived units
-    units["i0"] = units["v0"] / units["Ron"]                    # A, Current
-    units["t0"] = units["D"]**2 / (units["u0"] * units["v0"])   # us, Time
-
-    # Add to NWN
     NWN.graph["units"] = units
 
 
@@ -68,37 +50,39 @@ def create_NWN(
     be a integer number of wires. Thus, the closest density to an integer 
     number of wires is used.
 
+    See `units.py` for the units used by the parameters. 
+
     Parameters
     ----------
     wire_length : float, optional
-        Length of each nanowire. Given in micrometers.
+        Length of each nanowire. Given in units of l0.
 
     size : 2-tuple or float
-        The size of the nanowire network given in micrometers. If a tuple is
+        The size of the nanowire network given in units of l0. If a tuple is
         given, it is assumed to be (x-length, y-length). If a number is passed,
         both dimensions will have the same length. The x direction is labeled
         `length`, while the y direction is labeled `width`.
 
     density : float, optional
         Density of nanowires in the area determined by the width.
-        Given in #NW/micrometer^2.
+        Given in units of (l0)^-2.
 
     seed : int, optional
         Seed for random nanowire generation.
 
     conductance : float, optional
         The junction conductance of the nanowires where they intersect.
-        Given in siemens.
+        Given in units of (Ron)^-1.
 
     capacitance : float, optional
         The junction capacitance of the nanowires where they intersect.
         Given in microfarads.
 
     diameter : float, optional
-        The diameter of each nanowire. Given in nanometers.
+        The diameter of each nanowire. Given in units of D0.
 
     resistivity : float, optional
-        The resistivity of each nanowire. Given in nΩm.
+        The resistivity of each nanowire. Given in units of rho0.
     
     break_voltage : float, optional
         The voltage at which junctions switch from behaving like capacitors

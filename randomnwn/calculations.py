@@ -15,7 +15,7 @@ from typing import List, Tuple, Set, Union
 
 def get_connected_nodes(NWN: nx.Graph, connected: List[Tuple]) -> Set[Tuple]:
     """
-    Returns a list of nodes which are connected to the given list.
+    Returns a list of nodes which are connected to any of the given nodes.
 
     """
     nodelist = set()
@@ -67,6 +67,7 @@ def create_matrix(
     if value_type not in TYPES:
         raise ValueError("Invalid matrix type.")
 
+    # Default values
     if source_nodes is None:
         source_nodes = []
     if drain_nodes is None:
@@ -97,7 +98,7 @@ def create_matrix(
             shape = (nodelist_len, nodelist_len)
         )
 
-    # Zero the drain nodes row and column
+    # Zero each of the drain nodes' row and column
     for drain in drain_nodes:
         # Change to lil since csr sparsity changes are expensive
         M = M.tolil()
@@ -198,9 +199,10 @@ def solve_network(
     **kwargs
 ) -> np.ndarray:
     """
-    Solve for the voltages of each node in a given NWN. 
-    Each drain node will be grounded. If the type is voltage, 
-    each source node will be at the specified input voltage.
+    Solve for the voltages of each node in a given NWN. Each drain node will 
+    be grounded. If the type is "voltage", each source node will be at the 
+    specified input voltage. If the type is "current", current will be sourced
+    from each source node.
 
     Parameters
     ----------
@@ -214,14 +216,13 @@ def solve_network(
         Grounded output nodes.
 
     input : float
-        Supplied voltage/current.
+        Supplied voltage (current) in units of v0 (i0).
 
     type : {"voltage", "current"}, optional
         Input type. Default: "voltage".
 
     solver: str, optional
-        Name of sparse matrix solving algorithm to use.
-        Default: "spsolve".
+        Name of sparse matrix solving algorithm to use. Default: "spsolve".
 
     **kwargs
         Keyword arguments passed to the solver.

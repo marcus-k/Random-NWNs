@@ -100,6 +100,40 @@ def solve_evolution(
     """
     Solve parameters of the given nanowire network as various points in time.
 
+    Parameters
+    ----------
+    NWN: Graph
+        Nanowire network.
+
+    t_eval : ndarray
+        Time points to evaluate the nanowire network at. These should have
+        units of `t0`.
+
+    source_node : tuple
+        Voltage/current source node.
+
+    drain_node : tuple
+        Grounded output node.
+
+    voltage_func : Callable
+        The applied voltage with the calling signature `func(t)`. The voltage 
+        should have units of `v0`.
+
+    solver : str, optional
+        Name of sparse matrix solving algorithm to use. Default: "spsolve".
+
+    **kwargs
+        Keyword arguments passed to the solver.
+    
+    Returns
+    -------
+    sol : ndarray
+        Output array containing the `w`, the state variable, of each edge in
+        the same order given by `edge_list` which is also returned.
+
+    edge_list : list of tuples
+        List of the edges corresponding with each `w`.
+
     """
     # Get list of junction edges and the time bounds
     t_span = (t_eval[0], t_eval[-1])
