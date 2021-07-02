@@ -15,16 +15,16 @@ def default_units():
     units = {               # Unit, Description
         "v0": 1.0,          # V, Voltage
         "Ron": 10.0,        # Ω, ON junction resistance
-        "l0": 7.0,          # um, Wire length
+        "l0": 7.0,          # μm, Wire length
         "D0": 50.0,         # nm, Wire diameter
         "D": 10.0,          # nm, Junction length (2x Wire coating thickness)
         "rho0": 22.6,       # nΩm, Wire resistivity
-        "u0": 1e-2,         # um^2 s^-1 V^-1, Ion mobility
+        "mu0": 1e-2,        # μm^2 s^-1 V^-1, Ion mobility
         "Roff_Ron": 160     # none, Off-On Resistance ratio
     }
 
     # Derived units
     units["i0"] = units["v0"] / units["Ron"]                    # A, Current
-    units["t0"] = units["D"]**2 / (units["u0"] * units["v0"])   # us, Time
+    units["t0"] = units["D"]**2 / (units["mu0"] * units["v0"])  # μs, Time
 
     return units

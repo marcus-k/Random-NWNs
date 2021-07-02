@@ -36,7 +36,6 @@ def create_NWN(
     capacitance: float = 1000,
     diameter: float = (50.0 / 50.0),
     resistivity: float = (22.6 / 22.6),
-    break_voltage: float = -1,
 ) -> nx.Graph:
     """
     Create a nanowire network represented by a NetworkX graph. Wires are 
@@ -76,17 +75,13 @@ def create_NWN(
 
     capacitance : float, optional
         The junction capacitance of the nanowires where they intersect.
-        Given in microfarads.
+        Given in microfarads. (Currently unused)
 
     diameter : float, optional
         The diameter of each nanowire. Given in units of D0.
 
     resistivity : float, optional
         The resistivity of each nanowire. Given in units of rho0.
-    
-    break_voltage : float, optional
-        The voltage at which junctions switch from behaving like capacitors
-        to resistors. Given in volts.
 
     Returns
     -------
@@ -120,13 +115,9 @@ def create_NWN(
         junction_capacitance = capacitance,
         wire_diameter = diameter,
         wire_resistivity = resistivity,
-        break_voltage = break_voltage,
         electrode_list = [],
         lines = [],
         type = "JDA",
-        R_on = 10,
-        R_off = 1600,
-        mu = 1,
     )
 
     # Add scaling units
