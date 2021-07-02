@@ -9,8 +9,9 @@
 
 import numpy as np
 import networkx as nx
+from numbers import Number
 import matplotlib.pyplot as plt
-from typing import Callable
+from typing import Callable, Union
 from scipy.integrate import solve_ivp
 
 from .calculations import solve_network
@@ -156,3 +157,37 @@ def solve_evolution(
     nx.set_edge_attributes(NWN, attrs)
 
     return sol, edge_list
+
+
+def set_state_variables(
+    NWN: nx.Graph, 
+    w: Union[float, np.ndarray], 
+    edge_list: list = None
+):
+    """
+    Sets the given nanowire network's state variable. One can either pass
+    a list of state variable values, as well as the a list of edges, or one
+    can simply pass a single value and all junctions will be set to that value.
+
+    Parameters
+    ----------
+    NWN: Graph
+        Nanowire network. 
+
+    w : float or ndarray
+        Either a single value or an array of values. If an array is passed,
+        `edge_list` also needs to be passed as the order will be dependent
+        on that list.
+
+    edge_list : list of tuples, optional
+        The corresponding edge to each `w` value. Only used if `w` is an array.
+    
+    """
+    if isinstance(w, Number):
+        attrs = {edge: {"w": w} for edge in NWN.edges() if NWN.edges[edge]["type"] == "junction"}
+        nx.set_edge_attributes(NWN, attrs)
+    elif isinstance(w, np.ndarray):
+        attrs = {edge: {"w": w[i]} for i, edge in enumerate(edge_list)}
+        nx.set_edge_attributes(NWN, attrs)
+    else:
+        raise ValueError("Parameter w must be a number or an ndarray.")
