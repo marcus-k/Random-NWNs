@@ -2,7 +2,7 @@
 Random NWNs
 
 """
-__version__ = "0.1"
+from .version import __version__
 
 # try:
 #     from pathlib import Path

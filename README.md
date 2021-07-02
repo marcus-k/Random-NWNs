@@ -30,4 +30,4 @@ See the [wiki pages](https://github.com/Marcus-Repository/Random-NWNs/wiki).
 
 To uninstall the package, use:
 
-`pip uninstall Random-NWNs`
+`pip uninstall randomnwn`
