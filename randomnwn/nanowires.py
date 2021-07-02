@@ -14,17 +14,7 @@ import networkx as nx
 
 from .line_functions import *
 from .dynamics import *
-from .units import default_units
-
-
-def set_characteristic_units(NWN: nx.Graph, **kwargs):
-    """
-    Sets the characteristic units of a nanowire network.
-
-    """
-    units = default_units()
-    units.update(kwargs)
-    NWN.graph["units"] = units
+from ._units import set_characteristic_units
 
 
 def create_NWN(
@@ -36,6 +26,7 @@ def create_NWN(
     capacitance: float = 1000,
     diameter: float = (50.0 / 50.0),
     resistivity: float = (22.6 / 22.6),
+    units: Dict[str, float] = None
 ) -> nx.Graph:
     """
     Create a nanowire network represented by a NetworkX graph. Wires are 
@@ -49,7 +40,7 @@ def create_NWN(
     be a integer number of wires. Thus, the closest density to an integer 
     number of wires is used.
 
-    See `units.py` for the units used by the parameters. 
+    See `_units.py` for the units used by the parameters. 
 
     Parameters
     ----------
@@ -82,6 +73,10 @@ def create_NWN(
 
     resistivity : float, optional
         The resistivity of each nanowire. Given in units of rho0.
+
+    units : dict, optional
+        Dictionary of base units. Defaults to None which will use the default
+        units given in `_units.py`
 
     Returns
     -------
@@ -121,7 +116,7 @@ def create_NWN(
     )
 
     # Add scaling units
-    set_characteristic_units(NWN)
+    set_characteristic_units(NWN, units)
 
     # Create seeded random generator for testing
     rng = np.random.default_rng(seed)
