@@ -10,7 +10,6 @@
 import numpy as np
 import networkx as nx
 from numbers import Number
-import matplotlib.pyplot as plt
 from typing import Callable, Union
 from scipy.integrate import solve_ivp
 
