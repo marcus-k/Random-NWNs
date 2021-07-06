@@ -1,4 +1,4 @@
-# Random NWNs
+# Random NWNs [![Tests](https://github.com/marcus-k/Random-NWNs/actions/workflows/python-package.yml/badge.svg)](https://github.com/marcus-k/Random-NWNs/actions/workflows/python-package.yml)
 
 Package for creating and analyzing random nanowire networks.
 
