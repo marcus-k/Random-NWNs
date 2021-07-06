@@ -17,7 +17,10 @@ from scipy.integrate import solve_ivp
 from .calculations import solve_network
 
 
-def resist_func(NWN: nx.Graph, w: np.ndarray) -> np.ndarray:
+def resist_func(
+    NWN: nx.Graph,
+    w: Union[float, np.ndarray]
+) -> Union[float, np.ndarray]:
     """
     The HP group's resistance function in nondimensionalized form.
 
@@ -48,6 +51,7 @@ def deriv(
     drain_node: tuple,
     voltage_func: Callable,
     edge_list: list,
+    window_func: Callable,
     solver: str = "spsolve",
     kwargs: dict = None
 ) -> np.ndarray:
@@ -85,7 +89,7 @@ def deriv(
     V_delta = np.abs(v0 - v1) * np.sign(applied_V)
         
     # Find dw/dt
-    dwdt = V_delta / R
+    dwdt = V_delta / R * window_func(w)
 
     return dwdt
 
@@ -96,6 +100,7 @@ def solve_evolution(
     source_node: tuple, 
     drain_node: tuple, 
     voltage_func: Callable,
+    window_func: Callable = None,
     solver: str = "spsolve",
     **kwargs
 ):
@@ -137,6 +142,10 @@ def solve_evolution(
         List of the edges corresponding with each `w`.
 
     """
+    # Default window function
+    if window_func is None:
+        window_func = lambda x: 1
+
     # Get list of junction edges and the time bounds
     t_span = (t_eval[0], t_eval[-1])
     edge_list, w0 = map(list, zip(*[
@@ -148,7 +157,10 @@ def solve_evolution(
         deriv, t_span, w0, "DOP853", t_eval, 
         atol = 1e-12, 
         rtol = 1e-12,
-        args = (NWN, source_node, drain_node, voltage_func, edge_list, solver, kwargs)
+        args = (
+            NWN, source_node, drain_node, voltage_func, 
+            edge_list, window_func, solver, kwargs
+        )
     )
     final_w = sol.y[:, -1]
 
@@ -169,6 +181,8 @@ def set_state_variables(
     a list of state variable values, as well as the a list of edges, or one
     can simply pass a single value and all junctions will be set to that value.
 
+    This also updates the conductances accordingly.
+
     Parameters
     ----------
     NWN: Graph
@@ -183,11 +197,21 @@ def set_state_variables(
         The corresponding edge to each `w` value. Only used if `w` is an array.
     
     """
+    R = resist_func(NWN, w)
+
     if isinstance(w, Number):
-        attrs = {edge: {"w": w} for edge in NWN.edges() if NWN.edges[edge]["type"] == "junction"}
+        attrs = {
+            edge: {
+                "w": w, "conductance": 1 / R
+            } for edge in NWN.edges if NWN.edges[edge]["type"] == "junction"
+        }
         nx.set_edge_attributes(NWN, attrs)
     elif isinstance(w, np.ndarray):
-        attrs = {edge: {"w": w[i]} for i, edge in enumerate(edge_list)}
+        attrs = {
+            edge: {
+                "w": w[i], "conductance": 1 / R[i]
+            } for i, edge in enumerate(edge_list)
+        }
         nx.set_edge_attributes(NWN, attrs)
     else:
         raise ValueError("Parameter w must be a number or an ndarray.")
