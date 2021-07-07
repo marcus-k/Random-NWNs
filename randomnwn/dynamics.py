@@ -9,9 +9,11 @@
 
 import numpy as np
 import networkx as nx
-from numbers import Number
-from typing import Callable, Union
 from scipy.integrate import solve_ivp
+
+from numbers import Number
+from typing import Callable, List, Union, Tuple
+from scipy.integrate._ivp.ivp import OdeResult
 
 from .calculations import solve_network
 
@@ -42,7 +44,7 @@ def resist_func(
     return R
 
 
-def deriv(
+def _deriv(
     t: float, 
     w: np.ndarray,
     NWN: nx.Graph,
@@ -102,10 +104,11 @@ def solve_evolution(
     window_func: Callable = None,
     solver: str = "spsolve",
     **kwargs
-):
+) -> Tuple[OdeResult, List[Tuple]]:
     """
-    Solve parameters of the given nanowire network as various points in time.
-
+    Solve for the state variables `w` of the junctions of the given nanowire
+    network at various points in time with an applied voltage.
+    
     Parameters
     ----------
     NWN: Graph
@@ -133,9 +136,9 @@ def solve_evolution(
     
     Returns
     -------
-    sol : ndarray
-        Output array containing the `w`, the state variable, of each edge in
-        the same order given by `edge_list` which is also returned.
+    sol : OdeResult
+        Output from `scipy.intergrate.solve_ivp`. See the SciPy documentation
+        for information on this output's formatting.
 
     edge_list : list of tuples
         List of the edges corresponding with each `w`.
@@ -153,7 +156,7 @@ def solve_evolution(
 
     # Solve the system of ODEs
     sol = solve_ivp(
-        deriv, t_span, w0, "DOP853", t_eval, 
+        _deriv, t_span, w0, "DOP853", t_eval, 
         atol = 1e-12, 
         rtol = 1e-12,
         args = (
@@ -214,3 +217,94 @@ def set_state_variables(
         nx.set_edge_attributes(NWN, attrs)
     else:
         raise ValueError("Parameter w must be a number or an ndarray.")
+
+
+def get_evolution_values(
+    NWN: nx.Graph, 
+    sol: OdeResult, 
+    edge_list: List[Tuple], 
+    source_node: Tuple, 
+    drain_node: Tuple, 
+    voltage_func: Callable,
+    solver: str = "spsolve",
+    **kwargs
+) -> Tuple[np.ndarray]:
+    """
+    To be used in conjunction with `solve_evolution`. Takes the output from
+    `solve_evolution` and finds the voltage, sheet resistance, and current of
+    the given nanowire network for the set of `w` values for each time step.
+
+    The appropriate parameters passed should be the same as `solve_evolution`.
+
+    Parameters
+    ----------
+    NWN : Graph
+        Nanowire network.
+
+    sol : OdeResult
+        Output from `solve_evolution`.
+
+    edge_list : list of tuples
+        Output from `solve_evolution`.
+
+    source_node : tuple
+        Voltage/current source node.
+
+    drain_node : tuple
+        Grounded output node.
+
+    voltage_func : Callable
+        The applied voltage with the calling signature `func(t)`. The voltage 
+        should have units of `v0`.
+
+    solver : str, optional
+        Name of sparse matrix solving algorithm to use. Default: "spsolve".
+
+    **kwargs
+        Keyword arguments passed to the solver.
+
+    Returns
+    -------
+    voltage_array : ndarray
+        Array containing the voltage difference between the source and drain
+        at each time step.
+
+    resistance_array: ndarray
+        Array containing the resistance between the source and drain at each
+        time step.
+
+    current_array: ndarray
+        Array containing the current flow between the source and drain at each
+        time step.
+
+    """
+    # Preallocate output
+    voltage_array = np.zeros_like(sol.t)
+    resistance_array = np.zeros_like(sol.t)
+    current_array = np.zeros_like(sol.t)
+
+    source_index = NWN.graph["node_indices"][source_node]
+    drain_index = NWN.graph["node_indices"][drain_node]
+
+    # Loop through each time step
+    for i in range(len(sol.t)):
+        # Set state variables and solve network 
+        input_V = voltage_func(sol.t[i])
+        set_state_variables(NWN, sol.y.T[i], edge_list)
+        out = solve_network(
+            NWN, source_node, drain_node, input_V, "voltage", solver, **kwargs
+        )
+
+        # Find voltage, sheet resistance, and current
+        # between the source and drain nodes
+        V = out[source_index] - out[drain_index]
+        I = out[-1]
+        voltage_array[i] = V
+        current_array[i] = I
+
+        if I != 0:
+            resistance_array[i] = V / I
+        else: 
+            resistance_array[i] = np.nan
+    
+    return voltage_array, resistance_array, current_array
