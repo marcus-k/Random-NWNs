@@ -21,3 +21,4 @@ from .line_functions import *
 from .calculations import *
 from .plotting import *
 from .dynamics import *
+from ._units import *
