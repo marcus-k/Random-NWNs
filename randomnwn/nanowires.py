@@ -4,9 +4,9 @@
 # Functions to create nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   June 30, 2021
+# Date:   July 8, 2021
 
-from typing import List, Union
+from typing import List, Union, Iterable
 from numbers import Number
 import numpy as np
 from shapely.geometry import LineString
@@ -242,7 +242,7 @@ def add_wires(
     resistance: float = None
 ):
     """
-    Adds wires to a given nanowire network.
+    Adds wires to a given nanowire network in-place.
 
     Currently, adding a wire that already exists breaks things.
 
@@ -307,3 +307,84 @@ def add_wires(
 
     # Update wire density
     NWN.graph["wire_density"] = (NWN.graph["wire_num"] - len(NWN.graph["electrode_list"])) / NWN.graph["size"]
+
+
+def add_electrodes(NWN: nx.Graph, *args):
+    """
+    Convenience function for adding electrodes on the edges of a network 
+    in-place.
+
+    Can be called in two ways:
+
+        add_electrodes(NWN, *str)
+            where *str are strings with values {"left", "right", "top, "bottom"}
+
+        add_electrodes(NWN, *iterable)
+            where *iterable are iterables where first entry is a string (as
+            before) the second entry is number of electrodes on that side,
+            and the third entry is the spacing between the electrodes,
+            assumed to be in units of l0.
+
+    Parameters
+    ----------
+    NWN : Graph
+        Nanowire network.
+
+    *args
+        See function description.
+
+    """
+    length = NWN.graph["length"]
+    width = NWN.graph["width"]
+    line_list = []
+    seen = []
+
+    # Method one
+    if all(isinstance(arg, str) for arg in args):
+        for side in args:
+            if side in seen:
+                raise ValueError(f"Duplicate side: {side}")
+            elif side == "left":
+                line_list.append(LineString([(0, 0), (0, width)]))
+            elif side == "right":
+                line_list.append(LineString([(length, 0), (length, width)]))
+            elif side == "top":
+                line_list.append(LineString([(0, width), (length, width)]))
+            elif side == "bottom":
+                line_list.append(LineString([(0, 0), (length, 0)]))
+            else:
+                raise ValueError(f"Invalid side: {side}")
+            seen.append(side)
+
+    # Method two
+    elif all(isinstance(arg, Iterable) for arg in args):
+        for itr in args:
+            side, num, spacing = itr
+            if side in seen:
+                raise ValueError(f"Duplicate side: {side}")
+            elif side == "left":
+                for i in range(num):
+                    start = (i / num * width) + (spacing / 2)
+                    end = ((i + 1) / num * width) - (spacing / 2)
+                    line_list.append(LineString([(0, start), (0, end)]))
+            elif side == "right":
+                for i in range(num):
+                    start = (i / num * width) + (spacing / 2)
+                    end = ((i + 1) / num * width) - (spacing / 2)
+                    line_list.append(LineString([(length, start), (length, end)]))
+            elif side == "top":
+                for i in range(num):
+                    start = (i / num * length) + (spacing / 2)
+                    end = ((i + 1) / num * length) - (spacing / 2)
+                    line_list.append(LineString([(start, width), (end, width)]))
+            elif side == "bottom":
+                for i in range(num):
+                    start = (i / num * length) + (spacing / 2)
+                    end = ((i + 1) / num * length) - (spacing / 2)
+                    line_list.append(LineString([(start, 0), (end, 0)]))
+      
+    else:
+        raise ValueError("Arguments after NWN must be all strings or all lists.")
+        
+    # Add wires to the network
+    add_wires(NWN, line_list, [True] * len(line_list))
