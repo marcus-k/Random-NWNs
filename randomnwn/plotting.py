@@ -4,16 +4,29 @@
 # Functions to plot nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   June 18, 2021
+# Date:   July 8, 2021
 
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+
+from typing import Tuple
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 
 
-def plot_NWN(NWN, intersections=True, rnd_color=False):
+def plot_NWN(
+    NWN: nx.Graph, 
+    intersections: bool = True, 
+    rnd_color: bool = False,
+    scaled: bool = False,
+    grid: bool = True,
+    xlabel: str = "",
+    ylabel: str = "",
+) -> Tuple[Figure, Axes]:
     """
-    Plots a given nanowire network.
+    Plots a given nanowire network and returns the figure and axes.
 
     Parameters
     ----------
@@ -28,6 +41,19 @@ def plot_NWN(NWN, intersections=True, rnd_color=False):
         Whether or not to randomize the colors of the plotted lines.
         Defaults to false.
 
+    scaled: bool, optional
+        Whether or not to scale the plot by the characteristic values of the
+        given nanowire network. Defaults to False.
+
+    grid: bool, optional
+        Grid lines on plot. Defaults to true.
+
+    xlabel: str, optional
+        x label string.
+
+    ylabel: str, optional
+        y label string.
+
     Returns
     -------
     fig : Figure
@@ -38,6 +64,7 @@ def plot_NWN(NWN, intersections=True, rnd_color=False):
 
     """
     fig, ax = plt.subplots(figsize=(8, 6))
+    l0 = NWN.graph["units"]["l0"]
 
     # Plot intersection plots if required
     if intersections:
@@ -57,6 +84,23 @@ def plot_NWN(NWN, intersections=True, rnd_color=False):
             else:
                 ax.plot(*np.array(NWN.graph["lines"][i]).T, c="pink")
 
+    # Scale axes according to the characteristic values
+    if scaled:
+        ax.xaxis.set_major_formatter(
+            ticker.FuncFormatter(lambda x, pos: f"{x * l0:.1f}")
+        )
+        ax.yaxis.set_major_formatter(
+            ticker.FuncFormatter(lambda y, pos: f"{y * l0:.1f}")
+        )
+
+    # Other attributes
+    if grid: 
+        ax.grid(alpha=0.25)
+    if xlabel: 
+        ax.set_xlabel(xlabel)
+    if ylabel: 
+        ax.set_ylabel(ylabel)
+
     plt.show()
     return fig, ax
 
@@ -66,7 +110,7 @@ def draw_NWN(
     figsize: tuple = None,
     font_size: int = 8,
     sol: np.ndarray = None
-):
+) -> Tuple[Figure, Axes]:
     """
     Draw the given nanowire network as a networkx graph.
 
