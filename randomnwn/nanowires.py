@@ -170,6 +170,7 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
     NWN.graph["type"] = "MNR"
     l0 = NWN.graph["units"]["l0"]
     rho0 = NWN.graph["units"]["rho0"]
+    rho = NWN.graph["wire_resistivity"]
     Ron = NWN.graph["units"]["Ron"]
     D0 = NWN.graph["units"]["D0"]
     A0 = np.pi/4 * D0*D0
@@ -218,7 +219,7 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
         for ind, next_ind in zip(ordering, ordering[1:]):
             # Find inner-wire resistance
             L = NWN.nodes[(i, ind)]["loc"].distance(NWN.nodes[(i, next_ind)]["loc"])
-            wire_conductance = (Ron * A0) / (rho0 * l0 * L * 1e3)
+            wire_conductance = (Ron * A0) / (rho0 * l0 * rho * L * 1e3)
 
             # Add inner-wire edge
             NWN.add_edge(
