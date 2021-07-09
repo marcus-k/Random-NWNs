@@ -241,9 +241,10 @@ def add_wires(
     lines: List[LineString], 
     electrodes: List[bool], 
     resistance: float = None
-):
+) -> List[tuple]:
     """
-    Adds wires to a given nanowire network in-place.
+    Adds wires to a given nanowire network in-place. Returns the nodes of the 
+    added electrodes in order.
 
     Currently, adding a wire that already exists breaks things.
 
@@ -263,6 +264,11 @@ def add_wires(
 
     resistance : float, optional
         Junction resistances of the added wires.
+
+    Returns
+    -------
+    new_wire_nodes : list of tuples
+        List of the newly added nodes in the same order in `lines`.
     
     """
     if NWN.graph["type"] != "JDA":
@@ -277,9 +283,14 @@ def add_wires(
     start_ind = NWN.graph["wire_num"]
     NWN.graph["wire_num"] += new_wire_num
 
+    # Keep track of new wires
+    new_wire_nodes = []
+
     # Add wires to NWN
     for i in range(new_wire_num):
+        # Create new node
         NWN.graph["lines"].append(lines[i])
+        new_wire_nodes.append((start_ind + i,))
         NWN.add_node(
             (start_ind + i,), 
             electrode = electrodes[i]
@@ -309,11 +320,13 @@ def add_wires(
     # Update wire density
     NWN.graph["wire_density"] = (NWN.graph["wire_num"] - len(NWN.graph["electrode_list"])) / NWN.graph["size"]
 
+    return new_wire_nodes
 
-def add_electrodes(NWN: nx.Graph, *args):
+
+def add_electrodes(NWN: nx.Graph, *args)  -> List[tuple]:
     """
     Convenience function for adding electrodes on the edges of a network 
-    in-place.
+    in-place. Returns the nodes of the added electrodes in order.
 
     Can be called in two ways:
 
@@ -333,6 +346,13 @@ def add_electrodes(NWN: nx.Graph, *args):
 
     *args
         See function description.
+
+    Returns
+    -------
+    new_wire_nodes : list of tuples
+        List of the newly added nodes. If strings were passed, the list
+        follows the order passed. If iterables were passed, the list is
+        ordered from left-to-right or bottom-to-top concatented. 
 
     """
     length = NWN.graph["length"]
@@ -388,4 +408,5 @@ def add_electrodes(NWN: nx.Graph, *args):
         raise ValueError("Arguments after NWN must be all strings or all lists.")
         
     # Add wires to the network
-    add_wires(NWN, line_list, [True] * len(line_list))
+    new_wire_nodes = add_wires(NWN, line_list, [True] * len(line_list))
+    return new_wire_nodes
