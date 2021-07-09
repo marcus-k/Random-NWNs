@@ -102,6 +102,7 @@ def solve_evolution(
     drain_node: tuple, 
     voltage_func: Callable,
     window_func: Callable = None,
+    tol: float = 1e-12,
     solver: str = "spsolve",
     **kwargs
 ) -> Tuple[OdeResult, List[Tuple]]:
@@ -127,6 +128,14 @@ def solve_evolution(
     voltage_func : Callable
         The applied voltage with the calling signature `func(t)`. The voltage 
         should have units of `v0`.
+
+    window_func : Callable, optional
+        The window function used in the derivative of `w`. The calling
+        signature is `f(w)` where w is the array of state variables.
+        The default window function is `f(w) = 1`.
+
+    tol : float, optional
+        Tolerance of `scipy.integrate.solve_ivp`. Defaults to 1e-12.
 
     solver : str, optional
         Name of sparse matrix solving algorithm to use. Default: "spsolve".
@@ -157,12 +166,10 @@ def solve_evolution(
     # Solve the system of ODEs
     sol = solve_ivp(
         _deriv, t_span, w0, "DOP853", t_eval, 
-        atol = 1e-12, 
-        rtol = 1e-12,
-        args = (
-            NWN, source_node, drain_node, voltage_func, 
-            edge_list, window_func, solver, kwargs
-        )
+        atol = tol, 
+        rtol = tol,
+        args = (NWN, source_node, drain_node, voltage_func, edge_list, 
+            window_func, solver, kwargs)
     )
     final_w = sol.y[:, -1]
 
