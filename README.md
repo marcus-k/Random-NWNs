@@ -18,9 +18,9 @@ path), one can use
 
 `pip install -e .`
 
-The package can then be used by importing it as:
+The package can then be imported like normal with either:
 
-`from randomnwn import *`
+`from randomnwn import *` or `import randomnwn as rnwn`
 
 # Usage
 
