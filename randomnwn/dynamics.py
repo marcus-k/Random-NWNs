@@ -226,6 +226,7 @@ def get_evolution_values(
     source_node: Tuple, 
     drain_node: Tuple, 
     voltage_func: Callable,
+    scaled: bool = False,
     solver: str = "spsolve",
     **kwargs
 ) -> Tuple[np.ndarray]:
@@ -256,6 +257,9 @@ def get_evolution_values(
     voltage_func : Callable
         The applied voltage with the calling signature `func(t)`. The voltage 
         should have units of `v0`.
+
+    scaled : bool, optional
+        Scale the output by the characteristic values. Default: False.
 
     solver : str, optional
         Name of sparse matrix solving algorithm to use. Default: "spsolve".
@@ -306,5 +310,12 @@ def get_evolution_values(
             resistance_array[i] = V / I
         else: 
             resistance_array[i] = np.nan
+
+    # Scale the output if desired
+    if scaled:
+        units = NWN.graph["units"]
+        voltage_array *= units["v0"]
+        resistance_array *= units["Ron"]
+        current_array *= units["i0"]
     
     return voltage_array, resistance_array, current_array
