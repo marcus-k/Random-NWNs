@@ -6,15 +6,16 @@
 # Author: Marcus Kasdorf
 # Date:   July 8, 2021
 
-from typing import List, Union, Iterable
+from typing import List, Union, Iterable, Dict
 from numbers import Number
 import numpy as np
 from shapely.geometry import LineString
 import networkx as nx
 
-from .line_functions import *
-from .dynamics import *
-from ._units import set_characteristic_units
+from .line_functions import (
+    create_line, find_intersects, find_line_intersects, add_points_to_line
+)
+from .units import set_characteristic_units
 
 
 def create_NWN(

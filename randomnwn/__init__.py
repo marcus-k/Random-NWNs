@@ -1,24 +1,52 @@
 """
-Random NWNs
+Random NWNs package.
+
+Can be imported using either:
+
+    >>> import randomnwn as rnwn
+
+or:
+
+    >>> from randomnwn import *
 
 """
 from .version import __version__
 
-# try:
-#     from pathlib import Path
-#     module_path = Path(__file__).parent.resolve()
-#     speedup_file = module_path.joinpath("speedup.jl")
+from .nanowires import (
+    create_NWN,
+    convert_NWN_to_MNR,
+    add_wires,
+    add_electrodes,
+)
 
-#     from julia import Main
-#     Main.include(str(speedup_file))
+from .line_functions import (
+    create_line,
+    find_intersects,
+    find_line_intersects,
+    add_points_to_line,
+)
 
-#     _JULIA = True
-# except ModuleNotFoundError:
-#     _JULIA = False
+from .calculations import (
+    get_connected_nodes,
+    create_matrix,
+    solve_network,
+    scale_sol,
+)
 
-from .nanowires import *
-from .line_functions import *
-from .calculations import *
-from .plotting import *
-from .dynamics import *
-from ._units import *
+from .plotting import (
+    plot_NWN,
+    draw_NWN,
+)
+
+from .dynamics import (
+    resist_func,
+    solve_evolution,
+    set_state_variables,
+    get_evolution_values,
+)
+
+from .units import (
+    derived_units,
+    default_units,
+    set_characteristic_units,
+)
