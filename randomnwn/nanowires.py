@@ -15,7 +15,7 @@ import networkx as nx
 from .line_functions import (
     create_line, find_intersects, find_line_intersects, add_points_to_line
 )
-from .units import set_characteristic_units
+from .units import get_units
 
 
 def create_NWN(
@@ -76,8 +76,8 @@ def create_NWN(
         The resistivity of each nanowire. Given in units of rho0.
 
     units : dict, optional
-        Dictionary of base units. Defaults to None which will use the default
-        units given in `_units.py`
+        Dictionary of custom base units. Defaults to None which will use the 
+        default units given in `units.py`
 
     Returns
     -------
@@ -99,6 +99,9 @@ def create_NWN(
     wire_num = round(size * density)
     density = wire_num / size
 
+    # Get characteristic units
+    units = get_units(units)
+
     # Create NWN graph
     NWN = nx.Graph(
         wire_length = wire_length,
@@ -114,10 +117,8 @@ def create_NWN(
         electrode_list = [],
         lines = [],
         type = "JDA",
+        units = units,
     )
-
-    # Add scaling units
-    set_characteristic_units(NWN, units)
 
     # Create seeded random generator for testing
     rng = np.random.default_rng(seed)

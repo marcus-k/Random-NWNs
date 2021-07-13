@@ -7,25 +7,26 @@
 # Date:   July 1, 2021
 
 from typing import Dict
-from networkx import Graph
 
 
-def derived_units(old_units: Dict):
+def get_units(new_units: Dict[str, float] = None) -> Dict[str, float]:
     """
-    Add derived characteristic units to the given dictionary.
+    Returns the characteristic units for a nanowire network.
 
+    Parameters
+    ----------
+    new_units : dict, optional
+        Dictionary of any custom units to use. Only base units can be altered.
+
+    Returns
+    -------
+    units : dict
+        Dictionary of characteristic units.
+    
     """
-    units = old_units.copy()
-    units["i0"] = units["v0"] / units["Ron"]                    # A, Current
-    units["t0"] = units["D"]**2 / (units["mu0"] * units["v0"])  # μs, Time
-    return units
+    if new_units is None:
+        new_units = dict()
 
-
-def default_units(with_derived=True):
-    """
-    Default characteristic units for a nanowire network.
-
-    """
     # Base units
     units = {               # Unit, Description
         "v0": 1.0,          # V, Voltage
@@ -38,39 +39,12 @@ def default_units(with_derived=True):
         "Roff_Ron": 160     # none, Off-On Resistance ratio
     }
 
+    # Add any custom units
+    units.update(new_units)
+
     # Derived units
-    if with_derived:
-        units = derived_units(units)
+    units["i0"] = units["v0"] / units["Ron"]                    # A, Current
+    units["t0"] = units["D"]**2 / (units["mu0"] * units["v0"])  # μs, Time
 
     return units
 
-
-def set_characteristic_units(
-    NWN: Graph, 
-    new_units: Dict[str, float] = None
-):
-    """
-    Sets the characteristic units of a nanowire network.
-
-    Parameters
-    ----------
-    NWN: Graph
-        Nanowire network.
-
-    new_units: dict, optional
-        Base units to use. If none (default), no units are alter and the
-        default units are used.
-
-    """
-    if not new_units:
-        new_units = dict()
-
-    # Get and update only the base units
-    units = default_units(with_derived=False)
-    units.update(new_units)
-
-    # Add the derived units
-    units = derived_units(units)
-
-    # Add units to nanowire network
-    NWN.graph["units"] = units

@@ -46,7 +46,5 @@ from .dynamics import (
 )
 
 from .units import (
-    derived_units,
-    default_units,
-    set_characteristic_units,
+    get_units
 )
