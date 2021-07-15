@@ -87,10 +87,10 @@ def plot_NWN(
     # Scale axes according to the characteristic values
     if scaled:
         ax.xaxis.set_major_formatter(
-            ticker.FuncFormatter(lambda x, pos: f"{x * l0:.1f}")
+            ticker.FuncFormatter(lambda x, pos: f"{x * l0:.3g}")
         )
         ax.yaxis.set_major_formatter(
-            ticker.FuncFormatter(lambda y, pos: f"{y * l0:.1f}")
+            ticker.FuncFormatter(lambda y, pos: f"{y * l0:.3g}")
         )
 
     # Other attributes
