@@ -48,8 +48,8 @@ def _deriv(
     t: float, 
     w: np.ndarray,
     NWN: nx.Graph,
-    source_node: tuple, 
-    drain_node: tuple,
+    source_node: Union[Tuple, List[Tuple]], 
+    drain_node: Union[Tuple, List[Tuple]],
     voltage_func: Callable,
     edge_list: list,
     window_func: Callable,
@@ -98,8 +98,8 @@ def _deriv(
 def solve_evolution(
     NWN: nx.Graph, 
     t_eval: np.ndarray,
-    source_node: tuple, 
-    drain_node: tuple, 
+    source_node: Union[Tuple, List[Tuple]], 
+    drain_node: Union[Tuple, List[Tuple]], 
     voltage_func: Callable,
     window_func: Callable = None,
     tol: float = 1e-12,
@@ -119,11 +119,11 @@ def solve_evolution(
         Time points to evaluate the nanowire network at. These should have
         units of `t0`.
 
-    source_node : tuple
-        Voltage/current source node.
+    source_node : tuple, or list of tuples
+        Voltage source nodes.
 
-    drain_node : tuple
-        Grounded output node.
+    drain_node : tuple, or list of tuples
+        Grounded output nodes.
 
     voltage_func : Callable
         The applied voltage with the calling signature `func(t)`. The voltage 
@@ -226,12 +226,12 @@ def set_state_variables(
         raise ValueError("Parameter w must be a number or an ndarray.")
 
 
-def get_evolution_values(
+def get_evolution_current(
     NWN: nx.Graph, 
     sol: OdeResult, 
     edge_list: List[Tuple], 
-    source_node: Tuple, 
-    drain_node: Tuple, 
+    source_node: Union[Tuple, List[Tuple]], 
+    drain_node: Union[Tuple, List[Tuple]], 
     voltage_func: Callable,
     scaled: bool = False,
     solver: str = "spsolve",
@@ -239,8 +239,8 @@ def get_evolution_values(
 ) -> Tuple[np.ndarray]:
     """
     To be used in conjunction with `solve_evolution`. Takes the output from
-    `solve_evolution` and finds the voltage, sheet resistance, and current of
-    the given nanowire network for the set of `w` values for each time step.
+    `solve_evolution` and finds the current passing through each drain node
+    at each time step.
 
     The appropriate parameters passed should be the same as `solve_evolution`.
 
@@ -255,11 +255,11 @@ def get_evolution_values(
     edge_list : list of tuples
         Output from `solve_evolution`.
 
-    source_node : tuple
-        Voltage/current source node.
+    source_node : tuple, or list of tuples
+        Voltage source nodes.
 
-    drain_node : tuple
-        Grounded output node.
+    drain_node : tuple, or list of tuples
+        Grounded output nodes.
 
     voltage_func : Callable
         The applied voltage with the calling signature `func(t)`. The voltage 
@@ -276,26 +276,19 @@ def get_evolution_values(
 
     Returns
     -------
-    voltage_array : ndarray
-        Array containing the voltage difference between the source and drain
-        at each time step.
-
-    resistance_array: ndarray
-        Array containing the resistance between the source and drain at each
-        time step.
-
     current_array: ndarray
-        Array containing the current flow between the source and drain at each
-        time step.
+        Array containing the current flow through each drain node. Each row
+        corresponds to a drain node in the order passed.
 
     """
+    # Get lists of source and drain nodes
+    if isinstance(source_node, tuple):
+        source_node = [source_node]
+    if isinstance(drain_node, tuple):
+        drain_node = [drain_node]
+        
     # Preallocate output
-    voltage_array = np.zeros_like(sol.t)
-    resistance_array = np.zeros_like(sol.t)
-    current_array = np.zeros_like(sol.t)
-
-    source_index = NWN.graph["node_indices"][source_node]
-    drain_index = NWN.graph["node_indices"][drain_node]
+    current_array = np.zeros((len(drain_node), len(sol.t)))
 
     # Loop through each time step
     for i in range(len(sol.t)):
@@ -306,23 +299,17 @@ def get_evolution_values(
             NWN, source_node, drain_node, input_V, "voltage", solver, **kwargs
         )
 
-        # Find voltage, sheet resistance, and current
-        # between the source and drain nodes
-        V = out[source_index] - out[drain_index]
-        I = out[-1]
-        voltage_array[i] = V
-        current_array[i] = I
-
-        if I != 0:
-            resistance_array[i] = V / I
-        else: 
-            resistance_array[i] = np.nan
+        # Find current through each drain node
+        for j, drain in enumerate(drain_node):
+            I = 0
+            for node in NWN.neighbors(drain):
+                V = out[NWN.graph["node_indices"][node]]
+                R = 1 / NWN.edges[(node, drain)]["conductance"]
+                I += V / R
+            current_array[j, i] = I
 
     # Scale the output if desired
     if scaled:
-        units = NWN.graph["units"]
-        voltage_array *= units["v0"]
-        resistance_array *= units["Ron"]
-        current_array *= units["i0"]
+        current_array *= NWN.graph["units"]["i0"]
     
-    return voltage_array, resistance_array, current_array
+    return current_array.squeeze()
