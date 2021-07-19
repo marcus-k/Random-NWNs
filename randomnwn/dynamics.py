@@ -241,7 +241,7 @@ def get_evolution_current(
     scaled: bool = False,
     solver: str = "spsolve",
     **kwargs
-) -> Tuple[np.ndarray]:
+) -> np.ndarray:
     """
     To be used in conjunction with `solve_evolution`. Takes the output from
     `solve_evolution` and finds the current passing through each drain node

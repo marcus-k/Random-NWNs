@@ -259,9 +259,35 @@ def solve_drain_current(
     scaled: bool = False,
     solver: str = "spsolve",
     **kwargs
-) -> Tuple[np.ndarray]:
+) -> np.ndarray:
     """
     Solve for the current through each drain node of a NWN.
+
+    Parameters
+    ----------
+    NWN : Graph
+        Nanowire network.
+
+    source_node : tuple, or list of tuples
+        Voltage source nodes.
+
+    drain_node : tuple, or list of tuples
+        Grounded output nodes.
+
+    voltage : float
+        Voltage of the source nodes.
+
+    scaled : bool, optional
+        Whether or not to scaled the output by i0. Default: False.
+
+    solver: str, optional
+        Name of sparse matrix solving algorithm to use. Default: "spsolve".
+
+    Returns
+    -------
+    current_array : ndarray
+        Array containing the current flow through each drain node in the order
+        passed.
 
     """
     # Get lists of source and drain nodes
