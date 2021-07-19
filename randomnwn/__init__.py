@@ -30,6 +30,7 @@ from .calculations import (
     get_connected_nodes,
     create_matrix,
     solve_network,
+    solve_drain_current,
     scale_sol,
 )
 
@@ -42,7 +43,6 @@ from .dynamics import (
     resist_func,
     solve_evolution,
     set_state_variables,
-    get_drain_current,
     get_evolution_current,
 )
 

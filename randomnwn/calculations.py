@@ -4,7 +4,7 @@
 # Functions to solve nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   June 30, 2021
+# Date:   July 19, 2021
 
 import numpy as np
 import scipy
@@ -249,6 +249,49 @@ def solve_network(
         raise ValueError("Invalid source type.")
 
     return out
+
+
+def solve_drain_current(
+    NWN: nx.Graph, 
+    source_node: Union[Tuple, List[Tuple]], 
+    drain_node: Union[Tuple, List[Tuple]], 
+    voltage: float,
+    scaled: bool = False,
+    solver: str = "spsolve",
+    **kwargs
+) -> Tuple[np.ndarray]:
+    """
+    Solve for the current through each drain node of a NWN.
+
+    """
+    # Get lists of source and drain nodes
+    if isinstance(source_node, tuple):
+        source_node = [source_node]
+    if isinstance(drain_node, tuple):
+        drain_node = [drain_node]
+
+    # Preallocate output
+    current_array = np.zeros(len(drain_node))
+
+    # Solve nodes
+    out = solve_network(
+        NWN, source_node, drain_node, voltage, "voltage", solver, **kwargs
+    )
+
+    # Find current through each drain node
+    for i, drain in enumerate(drain_node):
+        I = 0
+        for node in NWN.neighbors(drain):
+            V = out[NWN.graph["node_indices"][node]]
+            R = 1 / NWN.edges[(node, drain)]["conductance"]
+            I += V / R
+        current_array[i] = I
+
+    # Scale the output if desired
+    if scaled:
+        current_array *= NWN.graph["units"]["i0"]
+
+    return current_array
 
 
 def scale_sol(NWN: nx.Graph, sol: np.ndarray):

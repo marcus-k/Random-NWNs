@@ -15,7 +15,7 @@ from numbers import Number
 from typing import Callable, List, Union, Tuple
 from scipy.integrate._ivp.ivp import OdeResult
 
-from .calculations import solve_network
+from .calculations import solve_network, solve_drain_current
 
 
 def resist_func(
@@ -231,46 +231,6 @@ def set_state_variables(
         raise ValueError("Parameter w must be a number or an ndarray.")
 
 
-def get_drain_current(
-    NWN: nx.Graph, 
-    source_node: Union[Tuple, List[Tuple]], 
-    drain_node: Union[Tuple, List[Tuple]], 
-    voltage: float,
-    scaled: bool = False,
-    solver: str = "spsolve",
-    **kwargs
-) -> Tuple[np.ndarray]:
-
-    # Get lists of source and drain nodes
-    if isinstance(source_node, tuple):
-        source_node = [source_node]
-    if isinstance(drain_node, tuple):
-        drain_node = [drain_node]
-
-    # Preallocate output
-    current_array = np.zeros(len(drain_node))
-
-    # Solve nodes
-    out = solve_network(
-        NWN, source_node, drain_node, voltage, "voltage", solver, **kwargs
-    )
-
-    # Find current through each drain node
-    for i, drain in enumerate(drain_node):
-        I = 0
-        for node in NWN.neighbors(drain):
-            V = out[NWN.graph["node_indices"][node]]
-            R = 1 / NWN.edges[(node, drain)]["conductance"]
-            I += V / R
-        current_array[i] = I
-
-    # Scale the output if desired
-    if scaled:
-        current_array *= NWN.graph["units"]["i0"]
-
-    return current_array
-
-
 def get_evolution_current(
     NWN: nx.Graph, 
     sol: OdeResult, 
@@ -340,7 +300,7 @@ def get_evolution_current(
         # Set state variables and get drain currents
         input_V = voltage_func(sol.t[i])
         set_state_variables(NWN, sol.y.T[i], edge_list)
-        current_array[i] = get_drain_current(
+        current_array[i] = solve_drain_current(
             NWN, source_node, drain_node, input_V, scaled, solver, **kwargs)
     
     return current_array.squeeze()
