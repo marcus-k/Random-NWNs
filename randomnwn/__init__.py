@@ -42,6 +42,7 @@ from .dynamics import (
     resist_func,
     solve_evolution,
     set_state_variables,
+    get_drain_current,
     get_evolution_current,
 )
 
