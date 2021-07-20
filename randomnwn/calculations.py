@@ -317,7 +317,7 @@ def solve_drain_current(
     if scaled:
         current_array *= NWN.graph["units"]["i0"]
 
-    return current_array
+    return current_array.squeeze()
 
 
 def scale_sol(NWN: nx.Graph, sol: np.ndarray):
