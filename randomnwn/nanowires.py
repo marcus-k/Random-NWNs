@@ -4,7 +4,7 @@
 # Functions to create nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   July 8, 2021
+# Date:   July 20, 2021
 
 from typing import List, Union, Iterable, Dict
 from numbers import Number
@@ -41,7 +41,7 @@ def create_NWN(
     be a integer number of wires. Thus, the closest density to an integer 
     number of wires is used.
 
-    See `_units.py` for the units used by the parameters. 
+    See `units.py` for the units used by the parameters. 
 
     Parameters
     ----------
