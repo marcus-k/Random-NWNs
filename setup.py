@@ -12,6 +12,7 @@ setup(
     version=namespace["__version__"],    
     description='Code for creating and analyzing random nanowire networks.',
     long_description=long_description,
+    long_description_content_type="text/markdown",
     url='https://github.com/marcus-k/Random-NWNs',
     author='Marcus Kasdorf',
     author_email='marcus.kasdorf@ucalgary.ca',
