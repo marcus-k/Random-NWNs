@@ -338,7 +338,8 @@ def add_electrodes(NWN: nx.Graph, *args)  -> List[tuple]:
             where *iterable are iterables where first entry is a string (as
             before) the second entry is number of electrodes on that side,
             and the third entry is the spacing between the electrodes,
-            assumed to be in units of l0.
+            assumed to be in units of l0. An optional fourth entry can be
+            given which is a list of offsets: a float value for each electrode.
 
     Parameters
     ----------
@@ -381,29 +382,48 @@ def add_electrodes(NWN: nx.Graph, *args)  -> List[tuple]:
     # Method two
     elif all(isinstance(arg, Iterable) for arg in args):
         for itr in args:
-            side, num, spacing = itr
+            # Unpack list
+            if len(itr) == 3:
+                side, num, spacing = itr
+                offsets = [0.0] * num
+            elif len(itr) == 4:
+                side, num, spacing, offsets = itr
+            else:
+                raise ValueError("Invalid arguments.")
+
+            # Cannot have the same side twice
             if side in seen:
                 raise ValueError(f"Duplicate side: {side}")
+
+            # Add electrodes
             elif side == "left":
                 for i in range(num):
+                    delta = offsets[i]
                     start = (i / num * width) + (spacing / 2)
                     end = ((i + 1) / num * width) - (spacing / 2)
-                    line_list.append(LineString([(0, start), (0, end)]))
+                    line_list.append(LineString(
+                        [(0, start + delta), (0, end + delta)]))
             elif side == "right":
                 for i in range(num):
+                    delta = offsets[i]
                     start = (i / num * width) + (spacing / 2)
                     end = ((i + 1) / num * width) - (spacing / 2)
-                    line_list.append(LineString([(length, start), (length, end)]))
+                    line_list.append(LineString(
+                        [(length, start + delta), (length, end + delta)]))
             elif side == "top":
                 for i in range(num):
+                    delta = offsets[i]
                     start = (i / num * length) + (spacing / 2)
                     end = ((i + 1) / num * length) - (spacing / 2)
-                    line_list.append(LineString([(start, width), (end, width)]))
+                    line_list.append(LineString(
+                        [(start + delta, width), (end + delta, width)]))
             elif side == "bottom":
                 for i in range(num):
+                    delta = offsets[i]
                     start = (i / num * length) + (spacing / 2)
                     end = ((i + 1) / num * length) - (spacing / 2)
-                    line_list.append(LineString([(start, 0), (end, 0)]))
+                    line_list.append(LineString(
+                        [(start + delta, 0), (end + delta, 0)]))
       
     else:
         raise ValueError("Arguments after NWN must be all strings or all lists.")
