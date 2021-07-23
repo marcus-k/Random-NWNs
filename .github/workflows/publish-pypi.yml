@@ -2,7 +2,10 @@
 
 name: Publish Python Package
 
-on: push
+on: 
+  push:
+    tags:
+      - '*'
 
 jobs:
   build-n-publish:
