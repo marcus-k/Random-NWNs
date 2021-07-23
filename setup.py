@@ -10,7 +10,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 setup(
     name='randomnwn',
     version=namespace["__version__"],    
-    description='Code for creating and analyzing random nanowire networks.',
+    description='Modelling and analyzing random nanowire networks in Python.',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url='https://github.com/marcus-k/Random-NWNs',
