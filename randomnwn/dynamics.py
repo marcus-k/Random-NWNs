@@ -66,6 +66,9 @@ def solve_evolution(
     tol : float, optional
         Tolerance of `scipy.integrate.solve_ivp`. Defaults to 1e-12.
 
+    model : {"default", "decay"}, optional
+        Evolutionary model type. Default: "default".
+
     solver : str, optional
         Name of sparse matrix solving algorithm to use. Default: "spsolve".
 
