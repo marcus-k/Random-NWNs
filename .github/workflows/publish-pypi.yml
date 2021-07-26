@@ -1,4 +1,5 @@
-# Testing publishing package to PyPI
+# Upload package to PyPI repository
+# on each new release.
 
 name: Publish Python Package
 
@@ -9,7 +10,7 @@ on:
 
 jobs:
   build-n-publish:
-    name: Build and publish Python 🐍 distributions 📦 to TestPyPI
+    name: Build and publish Python 🐍 distributions 📦 to PyPI
     runs-on: ubuntu-18.04
 
     steps:
