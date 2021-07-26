@@ -4,7 +4,7 @@
 # Functions to create nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   July 20, 2021
+# Date:   July 26, 2021
 
 from typing import List, Union, Iterable, Dict
 from numbers import Number
@@ -118,6 +118,8 @@ def create_NWN(
         lines = [],
         type = "JDA",
         units = units,
+        tau = 0.0,
+        epsilon = 0.0,
     )
 
     # Create seeded random generator for testing
@@ -140,6 +142,8 @@ def create_NWN(
         conductance = conductance,
         capacitance = capacitance,
         w = 0.0,
+        tau = 0.0,
+        epsilon = 0.0,
         type = "junction"
     )
     NWN.graph["loc"] = intersect_dict
@@ -311,6 +315,8 @@ def add_wires(
             conductance = conductance,
             capacitance = NWN.graph["junction_capacitance"],
             w = 0.0,
+            tau = 0.0,
+            epsilon = 0.0,
             type = "junction"
         )
         NWN.graph["loc"].update(intersect_dict)

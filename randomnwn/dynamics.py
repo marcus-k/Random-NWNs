@@ -5,95 +5,22 @@
 # See: https://doi.org/10.1038/nature06932
 # 
 # Author: Marcus Kasdorf
-# Date:   June 18, 2021
+# Date:   July 26, 2021
 
 import numpy as np
 import networkx as nx
 from scipy.integrate import solve_ivp
 
 from numbers import Number
-from typing import Callable, List, Union, Tuple
+from typing import Callable, List, Union, Tuple, Iterable
 from scipy.integrate._ivp.ivp import OdeResult
 
-from .calculations import solve_network, solve_drain_current
-
-
-def resist_func(
-    NWN: nx.Graph,
-    w: Union[float, np.ndarray]
-) -> Union[float, np.ndarray]:
-    """
-    The HP group's resistance function in nondimensionalized form.
-
-    Parameters
-    ----------
-    NWN : Graph
-        Nanowire network.
-
-    w : ndarray or scalar
-        Nondimensionalized state variable of the memristor element(s).
-
-    Returns
-    -------
-    R : ndarray or scalar
-        Resistance of the memristor element(s).
-
-    """
-    Roff_Ron = NWN.graph["units"]["Roff_Ron"]
-    R = w * (1 - Roff_Ron) + Roff_Ron
-    return R
-
-
-def _deriv(
-    t: float, 
-    w: np.ndarray,
-    NWN: nx.Graph,
-    source_node: Union[Tuple, List[Tuple]], 
-    drain_node: Union[Tuple, List[Tuple]],
-    voltage_func: Callable,
-    edge_list: list,
-    window_func: Callable,
-    tau: float,
-    solver: str = "spsolve",
-    kwargs: dict = None
-) -> np.ndarray:
-    """
-    Derivative of the nondimensionalized state variables `w`.
-
-    """
-    if kwargs is None:
-        kwargs = dict()
-
-    # Solve for and set resistances
-    R = resist_func(NWN, w)
-    attrs = {
-        edge: {"conductance": 1 / R[i]} for i, edge in enumerate(edge_list)   
-    }
-    nx.set_edge_attributes(NWN, attrs)
-
-    # Find applied voltage at the current time
-    applied_V = voltage_func(t)
-
-    # Solve for voltage at each node
-    *V, I = solve_network(
-        NWN, source_node, drain_node, applied_V, 
-        "voltage", solver, **kwargs
-    )
-    V = np.array(V)
-
-    # Find voltage differences
-    v0, v1 = np.zeros_like(w), np.zeros_like(w)
-    for i, edge in enumerate(edge_list):
-        v0_indx = NWN.graph["node_indices"][edge[0]]
-        v1_indx = NWN.graph["node_indices"][edge[1]]
-        v0[i] = V[v0_indx] 
-        v1[i] = V[v1_indx]
-    V_delta = np.abs(v0 - v1) * np.sign(applied_V)
-        
-    # Find dw/dt
-    dwdt = (V_delta / R * window_func(w)) - (tau * w)
-
-    return dwdt
+from .calculations import solve_drain_current
+from ._models import (
+    resist_func,
+    _HP_model_no_decay,
+    _HP_model_decay, 
+)
 
 
 def solve_evolution(
@@ -104,7 +31,7 @@ def solve_evolution(
     voltage_func: Callable,
     window_func: Callable = None,
     tol: float = 1e-12,
-    tau: float = 0.0,
+    model: str = "default",
     solver: str = "spsolve",
     **kwargs
 ) -> Tuple[OdeResult, List[Tuple]]:
@@ -139,9 +66,6 @@ def solve_evolution(
     tol : float, optional
         Tolerance of `scipy.integrate.solve_ivp`. Defaults to 1e-12.
 
-    tau : float, optional
-        Dissolution constant in units of 1/t0.
-
     solver : str, optional
         Name of sparse matrix solving algorithm to use. Default: "spsolve".
 
@@ -162,6 +86,16 @@ def solve_evolution(
     if window_func is None:
         window_func = lambda x: 1
 
+    # Model type
+    _deriv = None
+    if model == "default":
+        _deriv = _HP_model_no_decay
+    elif model == "decay":
+        _deriv = _HP_model_decay
+
+    if _deriv is None:
+        raise ValueError(f'Unsupported model type: model="{model}"')
+
     # Get list of junction edges and the time bounds
     t_span = (t_eval[0], t_eval[-1])
     edge_list, w0 = map(list, zip(*[
@@ -174,7 +108,7 @@ def solve_evolution(
         atol = tol, 
         rtol = tol,
         args = (NWN, source_node, drain_node, voltage_func, edge_list, 
-            window_func, tau, solver, kwargs)
+            window_func, solver, kwargs)
     )
     final_w = sol.y[:, -1]
 
@@ -185,50 +119,134 @@ def solve_evolution(
     return sol, edge_list
 
 
-def set_state_variables(
-    NWN: nx.Graph, 
-    w: Union[float, np.ndarray], 
-    edge_list: list = None
-):
+def set_state_variables(NWN: nx.Graph, *args):
     """
-    Sets the given nanowire network's state variable. One can either pass
-    a list of state variable values, as well as the a list of edges, or one
-    can simply pass a single value and all junctions will be set to that value.
+    Sets the given nanowire network's state variable. Can be called in the
+    following ways:
 
-    This also updates the conductances accordingly.
+        set_state_variables(NWN, w)
+            where `w` is a scalar value which is set for all edges.
+
+        set_state_variables(NWN, w, edge_list)
+            where `w` is an ndarray and edge_list is a list. The `w` array
+            contains the state variable for the corresponding edge in 
+            `edge_list`.
+
+        set_state_variables(NWN, w, tau)
+            where `w` and `tau` are scalar values which is set for all edges.
+
+        set_state_variables(NWN, w, tau, edge_list)
+            where `w` and `tau` are ndarrays and edge_list is a list. The `w` 
+            and `tau` arrays contains the state variables for the 
+            corresponding edge in `edge_list`.
+
+        set_state_variables(NWN, w, tau, epsilon)
+            where `w`, `tau`, and `epsilon` are scalar values which is set for 
+            all edges.
+
+        set_state_variables(NWN, w, tau, epsilon, edge_list)
+            where `w`,`tau`, and `epsilon` are ndarrays and edge_list is a list. 
+            The `w`,`tau`, and `epsilon` arrays contains the state variables 
+            for the corresponding edge in `edge_list`.
 
     Parameters
     ----------
     NWN: Graph
         Nanowire network. 
 
-    w : float or ndarray
-        Either a single value or an array of values. If an array is passed,
-        `edge_list` also needs to be passed as the order will be dependent
-        on that list.
-
-    edge_list : list of tuples, optional
-        The corresponding edge to each `w` value. Only used if `w` is an array.
+    *args
+        See above.
     
     """
-    R = resist_func(NWN, w)
+    # Only scalar w passed
+    if len(args) == 1 and isinstance(args[0], Number):
+        w = args[0]
+        R = resist_func(NWN, w)
 
-    if isinstance(w, Number):
         attrs = {
             edge: {
                 "w": w, "conductance": 1 / R
             } for edge in NWN.edges if NWN.edges[edge]["type"] == "junction"
         }
         nx.set_edge_attributes(NWN, attrs)
-    elif isinstance(w, np.ndarray):
-        attrs = {
-            edge: {
-                "w": w[i], "conductance": 1 / R[i]
-            } for i, edge in enumerate(edge_list)
-        }
-        nx.set_edge_attributes(NWN, attrs)
+
+    elif len(args) == 2:
+        # vector w and edge_list passed
+        if isinstance(args[0], np.ndarray) and isinstance(args[1], Iterable):
+            w, edge_list = args
+            R = resist_func(NWN, w)
+
+            attrs = {
+                edge: {
+                    "w": w[i], "conductance": 1 / R[i]
+                } for i, edge in enumerate(edge_list)
+            }
+            nx.set_edge_attributes(NWN, attrs)
+
+        # scalar w and scalar tau passed
+        if isinstance(args[0], Number) and isinstance(args[1], Number):
+            w, tau = args
+            R = resist_func(NWN, w)
+
+            attrs = {
+                edge: {
+                    "w": w, "conductance": 1 / R, "tau": tau
+                } for edge in NWN.edges if NWN.edges[edge]["type"] == "junction"
+            }
+            nx.set_edge_attributes(NWN, attrs)
+            NWN.graph["tau"] = tau
+
+    elif len(args) == 3:
+        # vector w, vector tau, and edge_list passed
+        if (isinstance(args[0], np.ndarray) and 
+            isinstance(args[1], np.ndarray) and 
+            isinstance(args[2], Iterable)):
+            w, tau, edge_list = args
+            R = resist_func(NWN, w)
+
+            attrs = {
+                edge: {
+                    "w": w[i], "conductance": 1 / R[i], "tau": tau[i]
+                } for i, edge in enumerate(edge_list)
+            }
+            nx.set_edge_attributes(NWN, attrs)
+
+        # scalar w, scalar tau, scalar epsilon passed
+        if (isinstance(args[0], Number) and 
+            isinstance(args[1], Number) and 
+            isinstance(args[2], Number)):
+            w, tau, epsilon = args
+            R = resist_func(NWN, w)
+
+            attrs = {
+                edge: {
+                    "w": w, "conductance": 1 / R,
+                    "tau": tau, "epsilon": epsilon
+                } for edge in NWN.edges if NWN.edges[edge]["type"] == "junction"
+            }
+            nx.set_edge_attributes(NWN, attrs)
+            NWN.graph["tau"] = tau
+            NWN.graph["epsilon"] = epsilon
+
+    elif len(args) == 4:
+        # vector w, vector tau, vector epsilon, and edge_list passed
+        if (isinstance(args[0], np.ndarray) and 
+            isinstance(args[1], np.ndarray) and
+            isinstance(args[2], np.ndarray) and
+            isinstance(args[3], Iterable)):
+            w, tau, epsilon, edge_list = args
+            R = resist_func(NWN, w)
+
+            attrs = {
+                edge: {
+                    "w": w[i], "conductance": 1 / R[i], 
+                    "tau": tau[i], "epsilon": epsilon[i]
+                } for i, edge in enumerate(edge_list)
+            }
+            nx.set_edge_attributes(NWN, attrs)
+
     else:
-        raise ValueError("Parameter w must be a number or an ndarray.")
+        raise ValueError("Invalid number of arguments.")
 
 
 def get_evolution_current(
