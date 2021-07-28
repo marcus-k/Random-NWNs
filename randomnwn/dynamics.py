@@ -5,7 +5,7 @@
 # See: https://doi.org/10.1038/nature06932
 # 
 # Author: Marcus Kasdorf
-# Date:   July 26, 2021
+# Date:   July 28, 2021
 
 import numpy as np
 import networkx as nx
@@ -19,7 +19,8 @@ from .calculations import solve_drain_current
 from ._models import (
     resist_func,
     _HP_model_no_decay,
-    _HP_model_decay, 
+    _HP_model_decay,
+    _HP_model_chen,
 )
 
 
@@ -66,7 +67,7 @@ def solve_evolution(
     tol : float, optional
         Tolerance of `scipy.integrate.solve_ivp`. Defaults to 1e-12.
 
-    model : {"default", "decay"}, optional
+    model : {"default", "decay", "chen"}, optional
         Evolutionary model type. Default: "default".
 
     solver : str, optional
@@ -85,7 +86,7 @@ def solve_evolution(
         List of the edges corresponding with each `w`.
 
     """
-    if model not in ("default", "decay"):
+    if model not in ("default", "decay", "chen"):
         raise ValueError(f'Unsupported model type: model="{model}"')
 
     # Default window function
@@ -110,6 +111,12 @@ def solve_evolution(
     elif model == "decay":
         _deriv = _HP_model_decay
         y0 = w0
+    elif model == "chen":
+        _deriv = _HP_model_chen
+        y0 = [*w0, *tau0, *epsilon0]
+        if "sigma" not in NWN.graph.keys():
+            raise AttributeError(
+                "sigma, theta, and a must be set before using Chen model.")
 
     # Solve the system of ODEs
     t_span = (t_eval[0], t_eval[-1])
@@ -122,7 +129,7 @@ def solve_evolution(
     )
 
     # Update the w value of each edge junction
-    set_state_variables(NWN, sol.y[:, -1], edge_list)
+    # set_state_variables(NWN, sol.y[:, -1], edge_list)
 
     return sol, edge_list
 

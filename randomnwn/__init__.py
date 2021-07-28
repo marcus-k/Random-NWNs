@@ -49,3 +49,7 @@ from .dynamics import (
 from .units import (
     get_units
 )
+
+from ._models import (
+    set_chen_params,
+)

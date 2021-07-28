@@ -4,11 +4,12 @@
 # Various dynamic models for nanowire networks.
 # 
 # Author: Marcus Kasdorf
-# Date:   July 26, 2021
+# Date:   July 28, 2021
 
 import numpy as np
 import networkx as nx
 from typing import Callable, List, Union, Tuple
+from numbers import Number
 
 from .calculations import solve_network
 
@@ -143,3 +144,74 @@ def _HP_model_decay(
     dwdt = (V_delta / R * window_func(w)) - (w / tau)
 
     return dwdt
+
+
+def _HP_model_chen(
+    t: float, 
+    y: np.ndarray,
+    NWN: nx.Graph,
+    source_node: Union[Tuple, List[Tuple]], 
+    drain_node: Union[Tuple, List[Tuple]],
+    voltage_func: Callable,
+    edge_list: list,
+    window_func: Callable,
+    solver: str = "spsolve",
+    kwargs: dict = None
+) -> np.ndarray:
+    """
+    Derivative of the nondimensionalized state variables `w`, `tau`, and
+    `epsilon`.
+
+    """
+    if kwargs is None:
+        kwargs = dict()
+
+    # Unpack values
+    split = len(y) // 3
+    w = y[:split]
+    tau = y[split:2*split]
+    epsilon = y[2*split:]
+    sigma = NWN.graph["sigma"]
+    theta = NWN.graph["theta"]
+    a = NWN.graph["a"]
+
+    # Solve for and set resistances
+    R = resist_func(NWN, w)
+    attrs = {
+        edge: {"conductance": 1 / R[i]} for i, edge in enumerate(edge_list)   
+    }
+    nx.set_edge_attributes(NWN, attrs)
+
+    # Find applied voltage at the current time
+    applied_V = voltage_func(t)
+
+    # Solve for voltage at each node
+    *V, I = solve_network(
+        NWN, source_node, drain_node, applied_V, 
+        "voltage", solver, **kwargs
+    )
+    V = np.array(V)
+
+    # Find voltage differences
+    v0, v1 = np.zeros_like(w), np.zeros_like(w)
+    for i, edge in enumerate(edge_list):
+        v0_indx = NWN.graph["node_indices"][edge[0]]
+        v1_indx = NWN.graph["node_indices"][edge[1]]
+        v0[i] = V[v0_indx] 
+        v1[i] = V[v1_indx]
+    V_delta = np.abs(v0 - v1) * np.sign(applied_V)
+        
+    # Find derivatives
+    l = V_delta / R
+    dw_dt = (l - ((w - epsilon) / tau)) * window_func(w)
+    dtau_dt = theta * l * (a - w)
+    deps_dt = sigma * l * window_func(w)
+    dydt = np.hstack([dw_dt, dtau_dt, deps_dt])
+
+    return dydt
+
+
+def set_chen_params(NWN: nx.Graph, sigma: Number, theta: Number, a: Number):
+    NWN.graph["sigma"] = sigma
+    NWN.graph["theta"] = theta
+    NWN.graph["a"] = a
