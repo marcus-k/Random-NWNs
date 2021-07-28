@@ -85,39 +85,44 @@ def solve_evolution(
         List of the edges corresponding with each `w`.
 
     """
+    if model not in ("default", "decay"):
+        raise ValueError(f'Unsupported model type: model="{model}"')
+
     # Default window function
     if window_func is None:
         window_func = lambda x: 1
 
-    # Model type
-    _deriv = None
-    if model == "default":
-        _deriv = _HP_model_no_decay
-    elif model == "decay":
-        _deriv = _HP_model_decay
-
-    if _deriv is None:
-        raise ValueError(f'Unsupported model type: model="{model}"')
-
-    # Get list of junction edges and the time bounds
-    t_span = (t_eval[0], t_eval[-1])
+    # Get list of junction edges and state variable w
     edge_list, w0 = map(list, zip(*[
         ((u, v), w) for u, v, w in NWN.edges.data("w") if w is not None]
     ))
+    
+    # Get list of tau
+    tau0 = [tau for _, _, tau in NWN.edges.data("tau") if tau is not None]
+
+    # Get list of epsilon
+    epsilon0 = [ep for _, _, ep in NWN.edges.data("epsilon") if ep is not None]
+
+    # Define initial state and associated derivative
+    if model == "default":
+        _deriv = _HP_model_no_decay
+        y0 = w0
+    elif model == "decay":
+        _deriv = _HP_model_decay
+        y0 = w0
 
     # Solve the system of ODEs
+    t_span = (t_eval[0], t_eval[-1])
     sol = solve_ivp(
-        _deriv, t_span, w0, "DOP853", t_eval, 
+        _deriv, t_span, y0, "DOP853", t_eval, 
         atol = tol, 
         rtol = tol,
         args = (NWN, source_node, drain_node, voltage_func, edge_list, 
             window_func, solver, kwargs)
     )
-    final_w = sol.y[:, -1]
 
     # Update the w value of each edge junction
-    attrs = {edge: {"w": final_w[i]} for i, edge in enumerate(edge_list)}
-    nx.set_edge_attributes(NWN, attrs)
+    set_state_variables(NWN, sol.y[:, -1], edge_list)
 
     return sol, edge_list
 
