@@ -167,16 +167,20 @@ def set_state_variables(NWN: nx.Graph, *args):
     
     """
     # Only scalar w passed
-    if len(args) == 1 and isinstance(args[0], Number):
-        w = args[0]
-        R = resist_func(NWN, w)
+    if len(args) == 1:
+        if isinstance(args[0], Number):
+            w = args[0]
+            R = resist_func(NWN, w)
 
-        attrs = {
-            edge: {
-                "w": w, "conductance": 1 / R
-            } for edge in NWN.edges if NWN.edges[edge]["type"] == "junction"
-        }
-        nx.set_edge_attributes(NWN, attrs)
+            attrs = {
+                edge: {
+                    "w": w, "conductance": 1 / R
+                } for edge in NWN.edges if NWN.edges[edge]["type"] == "junction"
+            }
+            nx.set_edge_attributes(NWN, attrs)
+
+        else:
+            raise ValueError("Invalid arguments.")
 
     elif len(args) == 2:
         # vector w and edge_list passed
@@ -192,7 +196,7 @@ def set_state_variables(NWN: nx.Graph, *args):
             nx.set_edge_attributes(NWN, attrs)
 
         # scalar w and scalar tau passed
-        if isinstance(args[0], Number) and isinstance(args[1], Number):
+        elif isinstance(args[0], Number) and isinstance(args[1], Number):
             w, tau = args
             R = resist_func(NWN, w)
 
@@ -203,6 +207,9 @@ def set_state_variables(NWN: nx.Graph, *args):
             }
             nx.set_edge_attributes(NWN, attrs)
             NWN.graph["tau"] = tau
+
+        else:
+            raise ValueError("Invalid arguments.")
 
     elif len(args) == 3:
         # vector w, vector tau, and edge_list passed
@@ -236,6 +243,9 @@ def set_state_variables(NWN: nx.Graph, *args):
             NWN.graph["tau"] = tau
             NWN.graph["epsilon"] = epsilon
 
+        else:
+            raise ValueError("Invalid arguments.")
+
     elif len(args) == 4:
         # vector w, vector tau, vector epsilon, and edge_list passed
         if (isinstance(args[0], np.ndarray) and 
@@ -252,6 +262,9 @@ def set_state_variables(NWN: nx.Graph, *args):
                 } for i, edge in enumerate(edge_list)
             }
             nx.set_edge_attributes(NWN, attrs)
+
+        else:
+            raise ValueError("Invalid arguments.")
 
     else:
         raise ValueError("Invalid number of arguments.")
