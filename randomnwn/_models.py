@@ -2,6 +2,12 @@
 # -*- coding: utf-8 -*-
 #
 # Various dynamic models for nanowire networks.
+
+# References
+# ----------
+# [1] https://doi.org/10.1038/nature06932
+# [2] https://doi.org/10.1016/j.physleta.2014.08.018
+# [3] https://doi.org/10.1088/0957-4484/24/38/384004
 # 
 # Author: Marcus Kasdorf
 # Date:   July 28, 2021

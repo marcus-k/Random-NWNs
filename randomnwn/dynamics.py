@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 #
 # Functions to evolve nanowire networks over time.
-# See: https://doi.org/10.1038/nature06932
 # 
 # Author: Marcus Kasdorf
 # Date:   July 28, 2021
