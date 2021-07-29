@@ -173,13 +173,8 @@ def _HP_model_chen(
         kwargs = dict()
 
     # Unpack values
-    split = len(y) // 3
-    w = y[:split]
-    tau = y[split:2*split]
-    epsilon = y[2*split:]
-    sigma = NWN.graph["sigma"]
-    theta = NWN.graph["theta"]
-    a = NWN.graph["a"]
+    w, tau, epsilon = np.split(y, 3)
+    sigma, theta, a = NWN.graph["sigma"], NWN.graph["theta"], NWN.graph["a"]
 
     # Solve for and set resistances
     R = resist_func(NWN, w)
@@ -212,7 +207,7 @@ def _HP_model_chen(
     dw_dt = (l - ((w - epsilon) / tau)) * window_func(w)
     dtau_dt = theta * l * (a - w)
     deps_dt = sigma * l * window_func(w)
-    dydt = np.hstack([dw_dt, dtau_dt, deps_dt])
+    dydt = np.hstack((dw_dt, dtau_dt, deps_dt))
 
     return dydt
 

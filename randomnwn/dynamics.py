@@ -112,7 +112,7 @@ def solve_evolution(
         y0 = w0
     elif model == "chen":
         _deriv = _HP_model_chen
-        y0 = [*w0, *tau0, *epsilon0]
+        y0 = np.hstack((w0, tau0, epsilon0))
         if "sigma" not in NWN.graph.keys():
             raise AttributeError(
                 "sigma, theta, and a must be set before using Chen model.")
