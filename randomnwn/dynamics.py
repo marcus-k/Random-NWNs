@@ -115,7 +115,7 @@ def solve_evolution(
         y0 = np.hstack((w0, tau0, epsilon0))
         if "sigma" not in NWN.graph.keys():
             raise AttributeError(
-                "sigma, theta, and a must be set before using Chen model.")
+                "sigma, theta, and a must be set before using the Chen model.")
 
     # Solve the system of ODEs
     t_span = (t_eval[0], t_eval[-1])
@@ -127,8 +127,15 @@ def solve_evolution(
             window_func, solver, kwargs)
     )
 
-    # Update the w value of each edge junction
-    # set_state_variables(NWN, sol.y[:, -1], edge_list)
+    # Update NWN to final state variables.
+    if model == "default":
+        set_state_variables(NWN, sol.y[:, -1], edge_list)
+    elif model == "decay":
+        set_state_variables(NWN, sol.y[:, -1], edge_list)
+    elif model == "chen":
+        w_list, tau_list, eps_list = np.split(sol.y, 3)
+        set_state_variables(NWN, w_list[:, -1], 
+            tau_list[:, -1], eps_list[:, -1], edge_list)
 
     return sol, edge_list
 
