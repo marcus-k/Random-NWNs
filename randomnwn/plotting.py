@@ -109,7 +109,8 @@ def draw_NWN(
     NWN: nx.Graph, 
     figsize: tuple = None,
     font_size: int = 8,
-    sol: np.ndarray = None
+    sol: np.ndarray = None,
+    fmt: str = ".2f"
 ) -> Tuple[Figure, Axes]:
     """
     Draw the given nanowire network as a networkx graph.
@@ -129,6 +130,10 @@ def draw_NWN(
         If supplied, these values will be display as node labels
         instead of the names of the nodes.
 
+    fmt : str, optional
+        String formatting for node labels. Only used if sol is passed.
+        Default: ".2f".
+
     Returns
     -------
     fig : Figure
@@ -146,7 +151,7 @@ def draw_NWN(
 
         # Label node voltages if sol is given, else just label as nodes numbers
         if sol is not None:
-            labels = {(key,): str(round(value, 2)) for key, value in zip(range(NWN.graph["wire_num"]), sol)}
+            labels = {(key,): f"{value:{fmt}}" for key, value in zip(range(NWN.graph["wire_num"]), sol)}
         else:
             labels = {(i,): i for i in range(NWN.graph["wire_num"])}
 
@@ -155,7 +160,7 @@ def draw_NWN(
     elif NWN.graph["type"] == "MNR":
         kwargs = {}
         if sol is not None:
-            labels = {node: str(round(value, 2)) for node, value in zip(sorted(NWN.nodes()), sol)}
+            labels = {node: f"{value:{fmt}}" for node, value in zip(sorted(NWN.nodes()), sol)}
             kwargs.update({"labels": labels})
         else:
             kwargs.update({"with_labels": True})
@@ -167,3 +172,4 @@ def draw_NWN(
 
     plt.show()
     return fig, ax
+
