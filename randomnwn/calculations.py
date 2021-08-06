@@ -320,6 +320,76 @@ def solve_drain_current(
     return current_array.squeeze()
 
 
+def solve_nodal_current(
+    NWN: nx.Graph, 
+    source_node: Union[Tuple, List[Tuple]], 
+    drain_node: Union[Tuple, List[Tuple]], 
+    voltage: float,
+    scaled: bool = False,
+    solver: str = "spsolve",
+    **kwargs
+) -> np.ndarray:
+    """
+    Solve for the current through each node of a NWN. It will appear that
+    no current is flowing through source (drain) nodes for positive (negative)
+    voltages.
+
+    Parameters
+    ----------
+    NWN : Graph
+        Nanowire network.
+
+    source_node : tuple, or list of tuples
+        Voltage source nodes.
+
+    drain_node : tuple, or list of tuples
+        Grounded output nodes.
+
+    voltage : float
+        Voltage of the source nodes.
+
+    scaled : bool, optional
+        Whether or not to scaled the output by i0. Default: False.
+
+    solver: str, optional
+        Name of sparse matrix solving algorithm to use. Default: "spsolve".
+
+    Returns
+    -------
+    current_array : ndarray
+        Array containing the current flow through each drain node in the order
+        passed.
+
+    """
+    # Get nodal voltages
+    V_out = solve_network(
+        NWN, source_node, drain_node, voltage, "voltage", solver, **kwargs
+    )
+    
+    # Preallocate output
+    current_array = np.zeros(len(NWN.nodes))
+
+    # Calculate input current for each node
+    for node in NWN.nodes:
+        node_ind = NWN.graph["node_indices"][node]
+        for edge in NWN.edges(node):
+            edge0_ind = NWN.graph["node_indices"][edge[0]]
+            edge1_ind = NWN.graph["node_indices"][edge[1]]
+            V_delta = V_out[edge1_ind] - V_out[edge0_ind]
+
+            # Only add current entering a node so we can see how much
+            # current passes through. Else, we just get zero due to KCL.
+            if V_delta > 0:
+                current_array[node_ind] += (V_delta * 
+                    NWN.edges[edge]["conductance"] * np.sign(voltage))
+
+    # Scale the output if desired
+    if scaled:
+        current_array *= NWN.graph["units"]["i0"]
+
+    return current_array
+
+
 def scale_sol(NWN: nx.Graph, sol: np.ndarray):
     """
     Scale the voltage and current solutions by their characteristic values.

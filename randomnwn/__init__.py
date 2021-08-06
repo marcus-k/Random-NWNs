@@ -31,6 +31,7 @@ from .calculations import (
     create_matrix,
     solve_network,
     solve_drain_current,
+    solve_nodal_current,
     scale_sol,
 )
 
