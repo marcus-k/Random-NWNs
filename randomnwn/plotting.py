@@ -10,6 +10,7 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import matplotlib as mpl
 
 from typing import Tuple
 from matplotlib.figure import Figure
@@ -110,7 +111,11 @@ def draw_NWN(
     figsize: tuple = None,
     font_size: int = 8,
     sol: np.ndarray = None,
-    fmt: str = ".2f"
+    fmt: str = ".2f",
+    edges: list = None,
+    weights: list = None,
+    log: bool = False,
+    cmap = plt.cm.RdYlBu_r,
 ) -> Tuple[Figure, Axes]:
     """
     Draw the given nanowire network as a networkx graph.
@@ -134,6 +139,26 @@ def draw_NWN(
         String formatting for node labels. Only used if sol is passed.
         Default: ".2f".
 
+    edges : list, optional
+        Must be passed with `weights`. This list contains the corresponding
+        edges to the weights. `sol` must also be passed so the current
+        across edges can be found.
+
+    weights : list, optional
+        Must be passed with `edges`. This list contains the corresponding
+        weights to the edges. `sol` must also be passed so the current
+        across edges can be found.
+
+    log : bool, optional
+        Whether or not to plot the logarithm of the current flow through 
+        each edge.
+
+    cmap : colormap, optional
+        Matplotlib color map to use for the edges.
+
+    tight : bool, optional
+        Matplotlib tight layout.
+
     Returns
     -------
     fig : Figure
@@ -146,16 +171,51 @@ def draw_NWN(
     fig, ax = plt.subplots(figsize=figsize)
 
     if NWN.graph["type"] == "JDA":
+        kwargs = dict()
+
         # Nodes are placed at the center of the wire
-        pos = {(i,): np.array(NWN.graph["lines"][i].centroid) for i in range(NWN.graph["wire_num"])}
+        kwargs.update({
+            "pos": {(i,): np.array(NWN.graph["lines"][i].centroid) 
+                for i in range(NWN.graph["wire_num"])}
+        })
 
         # Label node voltages if sol is given, else just label as nodes numbers
         if sol is not None:
-            labels = {(key,): f"{value:{fmt}}" for key, value in zip(range(NWN.graph["wire_num"]), sol)}
+            kwargs.update({
+                "labels": {(key,): f"{value:{fmt}}" 
+                    for key, value in zip(range(NWN.graph["wire_num"]), sol)}
+            })
         else:
-            labels = {(i,): i for i in range(NWN.graph["wire_num"])}
+            kwargs.update({
+                "labels": {(i,): i for i in range(NWN.graph["wire_num"])}
+            })
 
-        nx.draw(NWN, ax=ax, node_size=40, pos=pos, labels=labels, font_size=font_size, edge_color="r")
+        # 
+        if sol is not None and edges is not None and weights is not None:
+            edges_I = np.zeros(len(edges))
+            for (ind, (n1, n2)) in enumerate(edges):
+                n1_index = NWN.graph["node_indices"][n1]
+                n2_index = NWN.graph["node_indices"][n2]
+                V_delta = np.abs(sol[n1_index] - sol[n2_index])
+                edges_I[ind] = V_delta * weights[ind]
+            
+            if log:
+                edges_I = np.log10(edges_I)
+
+            kwargs.update({
+                "edgelist": edges, "edge_color": edges_I, "edge_cmap": cmap
+            })
+
+            cax = fig.add_axes([0.95, 0.2, 0.02, 0.6])
+            cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap)
+            cb.set_label("log10 of Current (arb. units)")
+        else:
+            kwargs.update({"edge_color": "r"})
+
+        # Add node formatting
+        kwargs.update({"ax": ax, "font_size": font_size, "node_size": 40})
+
+        nx.draw(NWN, **kwargs)
 
     elif NWN.graph["type"] == "MNR":
         kwargs = {}
