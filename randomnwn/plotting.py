@@ -190,8 +190,10 @@ def draw_NWN(
                 "labels": {(i,): i for i in range(NWN.graph["wire_num"])}
             })
 
-        # 
+        # Add edges colors corresponding to the current
         if sol is not None and edges is not None and weights is not None:
+
+            # Find current through each edges
             edges_I = np.zeros(len(edges))
             for (ind, (n1, n2)) in enumerate(edges):
                 n1_index = NWN.graph["node_indices"][n1]
@@ -199,16 +201,26 @@ def draw_NWN(
                 V_delta = np.abs(sol[n1_index] - sol[n2_index])
                 edges_I[ind] = V_delta * weights[ind]
             
+            # Log if desired
             if log:
+                edges_I[edges_I < 1e-8] = np.nan
                 edges_I = np.log10(edges_I)
+
+            # Add a colorbar to the network plot
+            norm = mpl.colors.Normalize(
+                vmin=np.min(edges_I), vmax=np.max(edges_I))
+
+            cax = fig.add_axes([0.95, 0.2, 0.02, 0.6])
+            cb = mpl.colorbar.ColorbarBase(cax, norm=norm, cmap=cmap)
+            if log:
+                cb.set_label("log10 of Current (arb. units)")
+            else:
+                cb.set_label("Current (arb. units)")
 
             kwargs.update({
                 "edgelist": edges, "edge_color": edges_I, "edge_cmap": cmap
             })
-
-            cax = fig.add_axes([0.95, 0.2, 0.02, 0.6])
-            cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap)
-            cb.set_label("log10 of Current (arb. units)")
+            
         else:
             kwargs.update({"edge_color": "r"})
 
