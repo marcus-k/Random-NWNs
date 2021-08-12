@@ -188,10 +188,6 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
         # Get the junctions for a wire
         junctions = NWN.edges((i,))
 
-        # If there's only one junction, nothing needs to be changed
-        if len(junctions) < 2:
-            continue
-
         # Get location of the junction for a wire
         junction_locs = {
             edge: NWN.graph["loc"][tuple(sorted([edge[0][0], edge[1][0]]))] for edge in junctions
