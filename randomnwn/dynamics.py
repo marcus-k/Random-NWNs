@@ -97,6 +97,35 @@ def solve_evolution(
         ((u, v), w) for u, v, w in NWN.edges.data("w") if w is not None]
     ))
     
+    # Get edge indices
+    if NWN.graph["type"] == "JDA":
+        start_nodes, end_nodes = map(list, 
+            zip(*[(*n1, *n2) for n1, n2 in edge_list]))
+
+    elif NWN.graph["type"] == "MNR":
+        tmp = []
+        for key in NWN.graph["node_indices"].keys():
+            if len(key) == 2:
+                tmp.append(key[1])
+            else:
+                tmp.append(0)
+
+        node_start_index = np.where(np.asarray(tmp) == 0)[0]
+
+        start_nodes, end_nodes = [], []
+        for n1, n2 in edge_list:
+            if len(n1) == 2:
+                start_nodes.append(node_start_index[n1[0]] + n1[1])
+            else:
+                start_nodes.append(node_start_index[n1[0]])
+            if len(n2) == 2:
+                end_nodes.append(node_start_index[n2[0]] + n2[1])
+            else:
+                end_nodes.append(node_start_index[n2[0]])
+
+    else:
+        raise ValueError("Invalid NWN type.")
+    
     # Get list of tau
     tau0 = [tau for _, _, tau in NWN.edges.data("tau") if tau is not None]
 
@@ -124,7 +153,7 @@ def solve_evolution(
         atol = tol, 
         rtol = tol,
         args = (NWN, source_node, drain_node, voltage_func, edge_list, 
-            window_func, solver, kwargs)
+            start_nodes, end_nodes, window_func, solver, kwargs)
     )
 
     # Update NWN to final state variables.

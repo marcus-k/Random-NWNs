@@ -54,6 +54,8 @@ def _HP_model_no_decay(
     drain_node: Union[Tuple, List[Tuple]],
     voltage_func: Callable,
     edge_list: list,
+    start_nodes: list,
+    end_nodes: list,
     window_func: Callable,
     solver: str = "spsolve",
     kwargs: dict = None
@@ -84,11 +86,8 @@ def _HP_model_no_decay(
 
     # Find voltage differences
     v0, v1 = np.zeros_like(w), np.zeros_like(w)
-    for i, edge in enumerate(edge_list):
-        v0_indx = NWN.graph["node_indices"][edge[0]]
-        v1_indx = NWN.graph["node_indices"][edge[1]]
-        v0[i] = V[v0_indx] 
-        v1[i] = V[v1_indx]
+    v0 = V[start_nodes]
+    v1 = V[end_nodes]
     V_delta = np.abs(v0 - v1) * np.sign(applied_V)
         
     # Find dw/dt
@@ -105,6 +104,8 @@ def _HP_model_decay(
     drain_node: Union[Tuple, List[Tuple]],
     voltage_func: Callable,
     edge_list: list,
+    start_nodes: list,
+    end_nodes: list,
     window_func: Callable,
     solver: str = "spsolve",
     kwargs: dict = None
@@ -136,11 +137,8 @@ def _HP_model_decay(
 
     # Find voltage differences
     v0, v1 = np.zeros_like(w), np.zeros_like(w)
-    for i, edge in enumerate(edge_list):
-        v0_indx = NWN.graph["node_indices"][edge[0]]
-        v1_indx = NWN.graph["node_indices"][edge[1]]
-        v0[i] = V[v0_indx] 
-        v1[i] = V[v1_indx]
+    v0 = V[start_nodes]
+    v1 = V[end_nodes]
     V_delta = np.abs(v0 - v1) * np.sign(applied_V)
 
     # Get decay constant
@@ -160,6 +158,8 @@ def _HP_model_chen(
     drain_node: Union[Tuple, List[Tuple]],
     voltage_func: Callable,
     edge_list: list,
+    start_nodes: list,
+    end_nodes: list,
     window_func: Callable,
     solver: str = "spsolve",
     kwargs: dict = None
@@ -195,11 +195,8 @@ def _HP_model_chen(
 
     # Find voltage differences
     v0, v1 = np.zeros_like(w), np.zeros_like(w)
-    for i, edge in enumerate(edge_list):
-        v0_indx = NWN.graph["node_indices"][edge[0]]
-        v1_indx = NWN.graph["node_indices"][edge[1]]
-        v0[i] = V[v0_indx] 
-        v1[i] = V[v1_indx]
+    v0 = V[start_nodes]
+    v1 = V[end_nodes]
     V_delta = np.abs(v0 - v1) * np.sign(applied_V)
         
     # Find derivatives
