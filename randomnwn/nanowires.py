@@ -433,3 +433,51 @@ def add_electrodes(NWN: nx.Graph, *args)  -> List[tuple]:
     # Add wires to the network
     new_wire_nodes = add_wires(NWN, line_list, [True] * len(line_list))
     return new_wire_nodes
+
+
+def get_edge_indices(NWN: nx.Graph, edges: List[tuple]):
+    """
+    Given a NWN and a list of edges, returns two lists: one of the indices of
+    the first nodes in the input edge list, and one of the second.
+
+    Parameters
+    ----------
+    NWN : Graph
+        Nanowire Network.
+
+    edges : list of tuples
+        List of edges to find the indices of.
+
+    """
+    # JDA edge indices
+    if NWN.graph["type"] == "JDA":
+        start_nodes, end_nodes = map(list, 
+            zip(*[(*n1, *n2) for n1, n2 in edges]))
+
+    # MNR edge indices
+    elif NWN.graph["type"] == "MNR":
+        tmp = []
+        for key in NWN.graph["node_indices"].keys():
+            if len(key) == 2:
+                tmp.append(key[1])
+            else:
+                tmp.append(0)
+
+        node_start_index = np.where(np.asarray(tmp) == 0)[0]
+
+        start_nodes, end_nodes = [], []
+        for n1, n2 in edges:
+            if len(n1) == 2:
+                start_nodes.append(node_start_index[n1[0]] + n1[1])
+            else:
+                start_nodes.append(node_start_index[n1[0]])
+            if len(n2) == 2:
+                end_nodes.append(node_start_index[n2[0]] + n2[1])
+            else:
+                end_nodes.append(node_start_index[n2[0]])
+
+    # Invalid NWN Type
+    else:
+        raise ValueError("Invalid NWN type.")
+
+    return start_nodes, end_nodes

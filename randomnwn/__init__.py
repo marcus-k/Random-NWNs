@@ -17,6 +17,7 @@ from .nanowires import (
     convert_NWN_to_MNR,
     add_wires,
     add_electrodes,
+    get_edge_indices,
 )
 
 from .line_functions import (
