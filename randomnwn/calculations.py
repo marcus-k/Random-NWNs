@@ -12,6 +12,8 @@ import networkx as nx
 from networkx.linalg import laplacian_matrix
 from typing import List, Tuple, Set, Union
 
+from .nanowires import get_edge_indices
+
 
 def get_connected_nodes(NWN: nx.Graph, connected: List[Tuple]) -> Set[Tuple]:
     """
@@ -388,6 +390,70 @@ def solve_nodal_current(
         current_array *= NWN.graph["units"]["i0"]
 
     return current_array
+
+
+def solve_edge_current(
+    NWN: nx.Graph, 
+    source_node: Union[Tuple, List[Tuple]], 
+    drain_node: Union[Tuple, List[Tuple]], 
+    voltage: float,
+    scaled: bool = False,
+    solver: str = "spsolve",
+    **kwargs
+) -> np.ndarray:
+    """
+    Solve for the current through each node of a NWN. It will appear that
+    no current is flowing through source (drain) nodes for positive (negative)
+    voltages.
+
+    Parameters
+    ----------
+    NWN : Graph
+        Nanowire network.
+
+    source_node : tuple, or list of tuples
+        Voltage source nodes.
+
+    drain_node : tuple, or list of tuples
+        Grounded output nodes.
+
+    voltage : float
+        Voltage of the source nodes.
+
+    scaled : bool, optional
+        Whether or not to scaled the output by i0. Default: False.
+
+    solver: str, optional
+        Name of sparse matrix solving algorithm to use. Default: "spsolve".
+
+    Returns
+    -------
+    I : ndarray
+        Array containing the current flow through each edge.
+
+    """
+    # Get nodal voltages
+    sol = solve_network(
+        NWN, source_node, drain_node, voltage, "voltage", solver, **kwargs
+    )
+
+    # Get edges and conductances
+    edges, G = zip(*nx.get_edge_attributes(NWN, "conductance").items())
+
+    # Find edges indices
+    start_nodes, end_nodes = get_edge_indices(NWN, edges)
+
+    # Find current through each edges
+    v0 = sol[start_nodes]
+    v1 = sol[end_nodes]
+    V_delta = np.abs(v0 - v1)
+    I = V_delta * G
+
+    # Scale the output if desired
+    if scaled:
+        I *= NWN.graph["units"]["i0"]
+
+    return I
 
 
 def scale_sol(NWN: nx.Graph, sol: np.ndarray):

@@ -33,6 +33,7 @@ from .calculations import (
     solve_network,
     solve_drain_current,
     solve_nodal_current,
+    solve_edge_current,
     scale_sol,
 )
 
