@@ -16,8 +16,6 @@ from typing import Tuple
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
-from .calculations import get_edge_indices
-
 
 def plot_NWN(
     NWN: nx.Graph, 
@@ -112,9 +110,10 @@ def draw_NWN(
     NWN: nx.Graph, 
     figsize: tuple = None,
     font_size: int = 8,
-    sol: np.ndarray = None,
+    node_labels: np.ndarray = None,
     fmt: str = ".2f",
-    color_edges: str = "same",
+    edge_colors: np.ndarray = None,
+    cbar_label: str = "Colorbar",
     cmap = plt.cm.RdYlBu_r,
 ) -> Tuple[Figure, Axes]:
     """
@@ -131,7 +130,7 @@ def draw_NWN(
     font_size : int, optional
         Font size to be passed to `nx.draw`.
 
-    sol : ndarray, optional
+    node_labels : ndarray, optional
         If supplied, these values will be display as node labels
         instead of the names of the nodes.
 
@@ -139,16 +138,15 @@ def draw_NWN(
         String formatting for node labels. Only used if sol is passed.
         Default: ".2f".
 
-    color_edges : str, {"same", "linear", "log"}
-        Edge color formatting. When set, edges are colored according to
-        the current passing through them. Defaults to "same", that is,
-        all edges are colored the same.
+    edge_colors : ndarray, optional
+        List of values to color the edges. Edges are assumed to be in the
+        same order as `NWN.edges`.
+
+    cbar_label : str, optional
+        Label for the colorbar.
 
     cmap : colormap, optional
         Matplotlib color map to use for the edges.
-
-    tight : bool, optional
-        Matplotlib tight layout.
 
     Returns
     -------
@@ -171,50 +169,32 @@ def draw_NWN(
         })
 
         # Label node voltages if sol is given, else just label as nodes numbers
-        if sol is not None:
+        if node_labels is not None:
             kwargs.update({
                 "labels": {(key,): f"{value:{fmt}}" 
-                    for key, value in zip(range(NWN.graph["wire_num"]), sol)}
+                    for key, value in zip(range(NWN.graph["wire_num"]), node_labels)}
             })
         else:
             kwargs.update({
                 "labels": {(i,): i for i in range(NWN.graph["wire_num"])}
             })
 
-        # Add edges colors corresponding to the current
-        if sol is not None and color_edges != "same":
-            # Get edges and conductances
-            edges, G = zip(*nx.get_edge_attributes(NWN, "conductance").items())
-
-            # Find edges indices
-            start_nodes, end_nodes = get_edge_indices(NWN, edges)
-
-            # Find current through each edges
-            v0 = sol[start_nodes]
-            v1 = sol[end_nodes]
-            V_delta = np.abs(v0 - v1)
-            edges_I = V_delta * G
-
-            # Log if desired
-            if color_edges == "log":
-                edges_I[edges_I < 1e-8] = np.nan
-                edges_I = np.log10(edges_I)
+        # Add edges colors if weights are passed
+        if edge_colors is not None:
+            kwargs.update({
+                "edgelist": NWN.edges, 
+                "edge_color": edge_colors, 
+                "edge_cmap": cmap
+            })
 
             # Add a colorbar to the network plot
             norm = mpl.colors.Normalize(
-                vmin=np.min(edges_I), vmax=np.max(edges_I))
+                vmin=np.nanmin(edge_colors), vmax=np.nanmax(edge_colors))
 
             cax = fig.add_axes([0.95, 0.2, 0.02, 0.6])
             cb = mpl.colorbar.ColorbarBase(cax, norm=norm, cmap=cmap)
-            if color_edges == "log":
-                cb.set_label("log10 of Current (arb. units)")
-            else:
-                cb.set_label("Current (arb. units)")
+            cb.set_label(cbar_label)
 
-            kwargs.update({
-                "edgelist": edges, "edge_color": edges_I, "edge_cmap": cmap
-            })
-            
         else:
             kwargs.update({"edge_color": "r"})
 
@@ -225,8 +205,8 @@ def draw_NWN(
 
     elif NWN.graph["type"] == "MNR":
         kwargs = {}
-        if sol is not None:
-            labels = {node: f"{value:{fmt}}" for node, value in zip(sorted(NWN.nodes()), sol)}
+        if node_labels is not None:
+            labels = {node: f"{value:{fmt}}" for node, value in zip(sorted(NWN.nodes()), node_labels)}
             kwargs.update({"labels": labels})
         else:
             kwargs.update({"with_labels": True})
