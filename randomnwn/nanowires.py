@@ -6,7 +6,7 @@
 # Author: Marcus Kasdorf
 # Date:   July 26, 2021
 
-from typing import List, Union, Iterable, Dict
+from typing import List, Tuple, Union, Iterable, Dict
 from numbers import Number
 import numpy as np
 from shapely.geometry import LineString
@@ -435,7 +435,7 @@ def add_electrodes(NWN: nx.Graph, *args)  -> List[tuple]:
     return new_wire_nodes
 
 
-def get_edge_indices(NWN: nx.Graph, edges: List[tuple]):
+def get_edge_indices(NWN: nx.Graph, edges: List[tuple]) -> Tuple[list, list]:
     """
     Given a NWN and a list of edges, returns two lists: one of the indices of
     the first nodes in the input edge list, and one of the second.
