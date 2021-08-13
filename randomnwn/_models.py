@@ -85,7 +85,6 @@ def _HP_model_no_decay(
     V = np.array(V)
 
     # Find voltage differences
-    v0, v1 = np.zeros_like(w), np.zeros_like(w)
     v0 = V[start_nodes]
     v1 = V[end_nodes]
     V_delta = np.abs(v0 - v1) * np.sign(applied_V)
@@ -136,7 +135,6 @@ def _HP_model_decay(
     V = np.array(V)
 
     # Find voltage differences
-    v0, v1 = np.zeros_like(w), np.zeros_like(w)
     v0 = V[start_nodes]
     v1 = V[end_nodes]
     V_delta = np.abs(v0 - v1) * np.sign(applied_V)
@@ -194,7 +192,6 @@ def _HP_model_chen(
     V = np.array(V)
 
     # Find voltage differences
-    v0, v1 = np.zeros_like(w), np.zeros_like(w)
     v0 = V[start_nodes]
     v1 = V[end_nodes]
     V_delta = np.abs(v0 - v1) * np.sign(applied_V)
