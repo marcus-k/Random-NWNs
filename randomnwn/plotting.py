@@ -16,6 +16,8 @@ from typing import Tuple
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
+from .calculations import get_edge_indices
+
 
 def plot_NWN(
     NWN: nx.Graph, 
@@ -112,9 +114,7 @@ def draw_NWN(
     font_size: int = 8,
     sol: np.ndarray = None,
     fmt: str = ".2f",
-    edges: list = None,
-    weights: list = None,
-    log: bool = False,
+    color_edges: str = "same",
     cmap = plt.cm.RdYlBu_r,
 ) -> Tuple[Figure, Axes]:
     """
@@ -139,19 +139,10 @@ def draw_NWN(
         String formatting for node labels. Only used if sol is passed.
         Default: ".2f".
 
-    edges : list, optional
-        Must be passed with `weights`. This list contains the corresponding
-        edges to the weights. `sol` must also be passed so the current
-        across edges can be found.
-
-    weights : list, optional
-        Must be passed with `edges`. This list contains the corresponding
-        weights to the edges. `sol` must also be passed so the current
-        across edges can be found.
-
-    log : bool, optional
-        Whether or not to plot the logarithm of the current flow through 
-        each edge.
+    color_edges : str, {"same", "linear", "log"}
+        Edge color formatting. When set, edges are colored according to
+        the current passing through them. Defaults to "same", that is,
+        all edges are colored the same.
 
     cmap : colormap, optional
         Matplotlib color map to use for the edges.
@@ -191,18 +182,21 @@ def draw_NWN(
             })
 
         # Add edges colors corresponding to the current
-        if sol is not None and edges is not None and weights is not None:
+        if sol is not None and color_edges != "same":
+            # Get edges and conductances
+            edges, G = zip(*nx.get_edge_attributes(NWN, "conductance").items())
+
+            # Find edges indices
+            start_nodes, end_nodes = get_edge_indices(NWN, edges)
 
             # Find current through each edges
-            edges_I = np.zeros(len(edges))
-            for (ind, (n1, n2)) in enumerate(edges):
-                n1_index = NWN.graph["node_indices"][n1]
-                n2_index = NWN.graph["node_indices"][n2]
-                V_delta = np.abs(sol[n1_index] - sol[n2_index])
-                edges_I[ind] = V_delta * weights[ind]
-            
+            v0 = sol[start_nodes]
+            v1 = sol[end_nodes]
+            V_delta = np.abs(v0 - v1)
+            edges_I = V_delta * G
+
             # Log if desired
-            if log:
+            if color_edges == "log":
                 edges_I[edges_I < 1e-8] = np.nan
                 edges_I = np.log10(edges_I)
 
@@ -212,7 +206,7 @@ def draw_NWN(
 
             cax = fig.add_axes([0.95, 0.2, 0.02, 0.6])
             cb = mpl.colorbar.ColorbarBase(cax, norm=norm, cmap=cmap)
-            if log:
+            if color_edges == "log":
                 cb.set_label("log10 of Current (arb. units)")
             else:
                 cb.set_label("Current (arb. units)")
