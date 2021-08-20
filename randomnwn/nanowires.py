@@ -245,7 +245,7 @@ def add_wires(
 ) -> List[tuple]:
     """
     Adds wires to a given nanowire network in-place. Returns the nodes of the 
-    added electrodes in order.
+    added wires in order.
 
     Currently, adding a wire that already exists breaks things.
 
