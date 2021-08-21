@@ -117,7 +117,9 @@ def draw_NWN(
     cmap = plt.cm.RdYlBu_r,
 ) -> Tuple[Figure, Axes]:
     """
-    Draw the given nanowire network as a networkx graph.
+    Draw the given nanowire network as a networkx graph. JDA drawing is more
+    detailed as nodes can be given spacial locations. With MNR drawing, nodes
+    will have random locations.
 
     Parameters
     ----------
