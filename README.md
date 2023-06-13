@@ -21,12 +21,18 @@ The latest version can be installed from PyPI:
 
 ## Development
 
-Download this repository, then navigate to the base folder and run:
+For convenience, one can use the `environment.yml` file with Anaconda to create a new
+virtual environment with all the required dependencies.
 
-`pip install .`
+`conda env create -f environment.yml`
 
-To install the package in editable mode instead (i.e. using the local project
-path), one can use:
+This will create a new environment named `randomnwn`. To activate the environment, use:
+
+`conda activate randomnwn`
+
+Then, to install the package, use pip. One can install the package in the usual way
+above, or install it in editable mode to allow for local development. Navigate to the 
+base folder and run:
 
 `pip install -e .`
 
