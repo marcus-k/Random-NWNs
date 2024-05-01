@@ -77,13 +77,13 @@ def plot_NWN(
     # Defaults to blue and pink lines, else random colors are used.
     if rnd_color:
         for i in range(NWN.graph["wire_num"]):
-            ax.plot(*np.array(NWN.graph["lines"][i]).T)
+            ax.plot(*np.asarray(NWN.graph["lines"][i].coords).T)
     else:
         for i in range(NWN.graph["wire_num"]):
             if (i,) in NWN.graph["electrode_list"]:
-                ax.plot(*np.array(NWN.graph["lines"][i]).T, c="xkcd:light blue")
+                ax.plot(*np.asarray(NWN.graph["lines"][i].coords).T, c="xkcd:light blue")
             else:
-                ax.plot(*np.array(NWN.graph["lines"][i]).T, c="pink")
+                ax.plot(*np.asarray(NWN.graph["lines"][i].coords).T, c="pink")
 
     # Scale axes according to the characteristic values
     if scaled:

@@ -1,8 +1,10 @@
 # Random NWNs [![Tests](https://github.com/marcus-k/Random-NWNs/actions/workflows/python-package.yml/badge.svg)](https://github.com/marcus-k/Random-NWNs/actions/workflows/python-package.yml)
 
-Python package for modelling and analyzing random nanowire networks. This package was a summer research project lasting from May 2021 to August 2021 under the supervision of Dr. Claudia Gomes da Rocha.
+Python package for modelling and analyzing random nanowire networks. This package was a summer research project lasting from May 2021 to August 2021 under the supervision of Dr. Claudia Gomes da Rocha. 
 
-For future additions, feel free to fork the repository, but please give credit where it's due, either here or to Marcus Kasdorf.
+**Update:** This project will now be continuing as of May 2024. If you are using this project, please note there will be **active development** on it and the functionality may change.
+
+For future additions, feel free to fork the repository. Please cite Marcus Kasdorf if you wish to extend the project.
 
 # Table of Contents
 * [Installation](#installation)
