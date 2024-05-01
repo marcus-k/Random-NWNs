@@ -18,5 +18,5 @@ setup(
     author_email='marcus.kasdorf@ucalgary.ca',
     license='MIT License',
     packages=['randomnwn'],
-    python_requires='>=3.8'
+    python_requires='>=3.10'
 )
