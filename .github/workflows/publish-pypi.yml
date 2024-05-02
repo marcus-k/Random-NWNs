@@ -1,11 +1,12 @@
-# Upload package to PyPI repository
-# on each new release.
+# Upload package to PyPI repository when a new tag is created.
+# Uses trushed publishing to authenticate with PyPI.
 
 name: Publish Python Package
 
 on: 
   push:
-    branches: [ update-workflows ]
+    tags:
+      - '*'
 
 jobs:
   build-n-publish:
@@ -14,7 +15,7 @@ jobs:
 
     environment:
       name: PyPI Publishing
-      url: https://test.pypi.org/p/randomnwn
+      url: https://pypi.org/p/randomnwn
 
     permissions:
       id-token: write
@@ -35,7 +36,5 @@ jobs:
     - name: Build package
       run: python -m build
 
-    - name: Publish distribution 📦 to TestPyPI
+    - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        repository-url: https://test.pypi.org/legacy/
