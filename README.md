@@ -15,9 +15,9 @@ For future additions, feel free to fork the repository. Please cite Marcus Kasdo
 
 Random NWNs can be installed from PyPI for quick use or installed manually for development.
 
-## Latest
+## Production
 
-The latest version can be installed from PyPI:
+The latest version of randomnwn can be installed from PyPI:
 
 `pip install randomnwn`
 
@@ -26,7 +26,7 @@ The latest version can be installed from PyPI:
 For convenience, one can use the `environment.yml` file with Anaconda to create a new
 virtual environment with all the required dependencies.
 
-`conda env create -f environment.yml`
+`conda env create -n randomnwn -f environment.yml`
 
 This will create a new environment named `randomnwn`. To activate the environment, use:
 
