@@ -3,10 +3,9 @@
 
 name: Publish Python Package
 
-on: 
-  push:
-    tags:
-      - '*'
+on:
+  release:
+    types: [published]
 
 jobs:
   build-n-publish:
