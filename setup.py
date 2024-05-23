@@ -16,7 +16,7 @@ setup(
     url="https://github.com/marcus-k/Random-NWNs",
     author="Marcus Kasdorf",
     author_email="marcus.kasdorf@ucalgary.ca",
-    license="MIT License",
+    license="GNU General Public License v3",
     packages=["randomnwn"],
     python_requires=">=3.10",
     install_requires=[
