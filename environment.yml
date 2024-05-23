@@ -2,14 +2,12 @@ name: nwn
 channels:
   - conda-forge
 dependencies:
-  - ipykernel
-  - joblib
-  - line_profiler
   - matplotlib=3.8.4
   - networkx=3.1
   - numpy=1.26.4
   - pip
-  - pytest
   - python=3.10
   - scipy=1.13.0
   - Shapely=2.0.4
+  - pip:
+    - randomnwn
