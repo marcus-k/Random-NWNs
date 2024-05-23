@@ -166,7 +166,7 @@ def draw_NWN(
 
         # Nodes are placed at the center of the wire
         kwargs.update({
-            "pos": {(i,): np.array(NWN.graph["lines"][i].centroid) 
+            "pos": {(i,): np.asarray(*NWN.graph["lines"][i].centroid.coords) 
                 for i in range(NWN.graph["wire_num"])}
         })
 
