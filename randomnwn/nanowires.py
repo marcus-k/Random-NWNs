@@ -214,8 +214,9 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
             NWN.add_node((i, j), loc=loc, electrode=False)
             NWN.add_edge((i, j), other_node, **old_attributes)
 
-        # Remove old JDA node
-        NWN.remove_node((i,))
+        # Remove old JDA node, only if it had connections
+        if len(junction_locs) >= 1:
+            NWN.remove_node((i,))
 
         # Add edges between subnodes
         for ind, next_ind in zip(ordering, ordering[1:]):
