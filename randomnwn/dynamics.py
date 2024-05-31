@@ -15,7 +15,7 @@ from typing import Callable, List, Union, Tuple, Iterable
 from scipy.integrate._ivp.ivp import OdeResult
 
 from .nanowires import get_edge_indices
-from .calculations import solve_drain_current
+from .calculations import solve_drain_current, solve_network
 from ._models import (
     resist_func,
     _HP_model_no_decay,
@@ -360,3 +360,75 @@ def get_evolution_current(
             NWN, source_node, drain_node, input_V, scaled, solver, **kwargs)
     
     return current_array.squeeze()
+
+
+def get_evolution_node_voltages(
+    NWN: nx.Graph, 
+    sol: OdeResult, 
+    edge_list: list[tuple], 
+    source_node: tuple | list[tuple],
+    drain_node: tuple | list[tuple],
+    voltage_func: Callable,
+    solver: str = "spsolve",
+    **kwargs
+) -> np.ndarray:
+    """
+    To be used in conjunction with `solve_evolution`. Takes the output from
+    `solve_evolution` and finds the voltage of all nodes in the network at each
+    time step.
+
+    The appropriate parameters passed should be the same as `solve_evolution`.
+
+    Parameters
+    ----------
+    NWN : Graph
+        Nanowire network.
+
+    sol : OdeResult
+        Output from `solve_evolution`.
+
+    edge_list : list of tuples
+        Output from `solve_evolution`.
+
+    source_node : tuple, or list of tuples
+        Voltage source nodes.
+
+    drain_node : tuple, or list of tuples
+        Grounded output nodes.
+
+    voltage_func : Callable
+        The applied voltage with the calling signature `func(t)`. The voltage 
+        should have units of `v0`.
+
+    solver : str, optional
+        Name of sparse matrix solving algorithm to use. Default: "spsolve".
+
+    **kwargs
+        Keyword arguments passed to the solver.
+
+    Returns
+    -------
+    node_voltage_array: ndarray
+        An `n` x `m` array containing the voltage of each node in the network,
+        corresponding to the `n` time steps and `m` nodes in the network.
+
+    """
+    # Get lists of source and drain nodes
+    if isinstance(source_node, tuple):
+        source_node = [source_node]
+    if isinstance(drain_node, tuple):
+        drain_node = [drain_node]
+        
+    # Preallocate output
+    node_voltage_array = np.zeros((len(sol.t), len(NWN.nodes)))
+
+    # Loop through each time step
+    for i in range(len(sol.t)):
+        # Set state variables and get drain currents
+        input_V = voltage_func(sol.t[i])
+        set_state_variables(NWN, sol.y.T[i], edge_list)
+        *node_voltage_array[i], I = solve_network(
+            NWN, source_node, drain_node, input_V, "voltage", solver, **kwargs
+        )
+    
+    return node_voltage_array.squeeze()
