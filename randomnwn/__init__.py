@@ -47,6 +47,7 @@ from .dynamics import (
     solve_evolution,
     set_state_variables,
     get_evolution_current,
+    get_evolution_node_voltages,
 )
 
 from .units import (
