@@ -21,7 +21,7 @@ from .line_functions import (
 from .units import get_units
 
 
-class _NWN(nx.Graph):
+class NanowireNetwork(nx.Graph):
     """
     Internal nanowire network object. Should not be instantiated directly.
     Use `create_NWN()` instead.
@@ -130,7 +130,7 @@ def create_NWN(
     diameter: float = (50.0 / 50.0),
     resistivity: float = (22.6 / 22.6),
     units: dict[str, float] = None
-) -> _NWN:
+) -> NanowireNetwork:
     """
     Create a nanowire network represented by a NetworkX graph. Wires are 
     represented by the graph's vertices, while the wire junctions are 
@@ -205,7 +205,7 @@ def create_NWN(
     units = get_units(units)
 
     # Create NWN graph
-    NWN = _NWN(
+    NWN = NanowireNetwork(
         wire_length = wire_length,
         length = length,
         width = width, 
@@ -261,7 +261,7 @@ def create_NWN(
     return NWN
 
 
-def convert_NWN_to_MNR(NWN: _NWN):
+def convert_NWN_to_MNR(NWN: NanowireNetwork):
     """
     Converts a JDA NWN to an MNR NWN in-place.
 
@@ -341,7 +341,7 @@ def convert_NWN_to_MNR(NWN: _NWN):
 
 
 def add_wires(
-    NWN: _NWN, 
+    NWN: NanowireNetwork, 
     lines: list[LineString], 
     electrodes: list[bool], 
     resistance: float = None
@@ -429,7 +429,7 @@ def add_wires(
     return new_wire_nodes
 
 
-def add_electrodes(NWN: _NWN, *args)  -> list[JDANode]:
+def add_electrodes(NWN: NanowireNetwork, *args)  -> list[JDANode]:
     """
     Convenience function for adding electrodes on the edges of a network 
     in-place. Returns the nodes of the added electrodes in order.
@@ -538,7 +538,7 @@ def add_electrodes(NWN: _NWN, *args)  -> list[JDANode]:
     return new_wire_nodes
 
 
-def get_edge_indices(NWN: _NWN, edges: list[NWNEdge]) -> tuple[list, list]:
+def get_edge_indices(NWN: NanowireNetwork, edges: list[NWNEdge]) -> tuple[list, list]:
     """
     Given a NWN and a list of edges, returns two lists: one of the indices of
     the first nodes in the input edge list, and one of the second.

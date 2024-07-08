@@ -16,7 +16,7 @@ from scipy.integrate._ivp.ivp import OdeResult
 import numpy.typing as npt
 from .typing import *
 
-from .nanowires import get_edge_indices, _NWN
+from .nanowires import get_edge_indices, NanowireNetwork
 from .calculations import solve_drain_current, solve_network
 from ._models import (
     resist_func,
@@ -27,7 +27,7 @@ from ._models import (
 
 
 def solve_evolution(
-    NWN: _NWN, 
+    NWN: NanowireNetwork, 
     t_eval: npt.NDArray,
     source_node: NWNNode | list[NWNNode], 
     drain_node: NWNNode | list[NWNNode], 
@@ -146,7 +146,7 @@ def solve_evolution(
     return sol, edge_list
 
 
-def set_state_variables(NWN: _NWN, *args):
+def set_state_variables(NWN: NanowireNetwork, *args):
     """
     Sets the given nanowire network's state variable. Can be called in the
     following ways:
@@ -290,7 +290,7 @@ def set_state_variables(NWN: _NWN, *args):
 
 
 def get_evolution_current(
-    NWN: _NWN, 
+    NWN: NanowireNetwork, 
     sol: OdeResult, 
     edge_list: list[NWNEdge], 
     source_node: NWNNode | list[NWNNode], 

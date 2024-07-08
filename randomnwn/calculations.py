@@ -14,10 +14,10 @@ from networkx.linalg import laplacian_matrix
 from typing import Tuple, Union
 
 from .typing import *
-from .nanowires import get_edge_indices, _NWN
+from .nanowires import get_edge_indices, NanowireNetwork
 
 
-def get_connected_nodes(NWN: _NWN, connected: list[NWNNode]) -> set[NWNNode]:
+def get_connected_nodes(NWN: NanowireNetwork, connected: list[NWNNode]) -> set[NWNNode]:
     """
     Returns a list of nodes which are connected to any of the given nodes.
 
@@ -30,7 +30,7 @@ def get_connected_nodes(NWN: _NWN, connected: list[NWNNode]) -> set[NWNNode]:
 
 
 def create_matrix(
-    NWN: _NWN,
+    NWN: NanowireNetwork,
     value_type: str = "conductance",
     source_nodes: list[NWNNode] = None,
     drain_nodes: list[NWNNode] = None,
@@ -134,7 +134,7 @@ def _solver(A, z, solver, **kwargs):
 
 
 def _solve_voltage(
-    NWN: _NWN, 
+    NWN: NanowireNetwork, 
     voltage: float, 
     source_nodes: list[NWNNode], 
     drain_nodes: list[NWNNode],
@@ -168,7 +168,7 @@ def _solve_voltage(
 
 
 def _solve_current(    
-    NWN: _NWN, 
+    NWN: NanowireNetwork, 
     current: float, 
     source_nodes: list[NWNNode], 
     drain_nodes: list[NWNNode],
@@ -194,7 +194,7 @@ def _solve_current(
 
 
 def solve_network(
-    NWN: _NWN, 
+    NWN: NanowireNetwork, 
     source_node: NWNNode | list[NWNNode], 
     drain_node: NWNNode | list[NWNNode], 
     input: float,
@@ -256,7 +256,7 @@ def solve_network(
 
 
 def solve_drain_current(
-    NWN: _NWN, 
+    NWN: NanowireNetwork, 
     source_node: NWNNode | list[NWNNode], 
     drain_node: NWNNode | list[NWNNode], 
     voltage: float,
@@ -325,7 +325,7 @@ def solve_drain_current(
 
 
 def solve_nodal_current(
-    NWN: _NWN, 
+    NWN: NanowireNetwork, 
     source_node: NWNNode | list[NWNNode], 
     drain_node: NWNNode | list[NWNNode], 
     voltage: float,
@@ -395,7 +395,7 @@ def solve_nodal_current(
 
 
 def solve_edge_current(
-    NWN: _NWN, 
+    NWN: NanowireNetwork, 
     source_node: NWNNode | list[NWNNode], 
     drain_node: NWNNode | list[NWNNode], 
     voltage: float,
@@ -458,7 +458,7 @@ def solve_edge_current(
     return I
 
 
-def scale_sol(NWN: _NWN, sol: npt.NDArray) -> npt.NDArray:
+def scale_sol(NWN: NanowireNetwork, sol: npt.NDArray) -> npt.NDArray:
     """
     Scale the voltage and current solutions by their characteristic values.
 
