@@ -240,7 +240,7 @@ class NanowireNetwork(nx.Graph):
         """
         if var_name not in self.state_vars:
             cls = self.__class__
-            raise ParameterNotSetError(
+            raise AttributeError(
                 f"'{var_name}' is not in {cls.__qualname__}.state_vars (currently is {self.state_vars})."
                 f"\nDid you set it using {cls.__qualname__}.state_vars = ['{var_name}', ...]?"
             )
@@ -248,24 +248,30 @@ class NanowireNetwork(nx.Graph):
         if edge_list is None:
             edge_list = self.wire_junctions
 
-        return np.array([self[edge[0]][edge[1]][var_name] for edge in edge_list])
+        try:
+            return np.array([self[edge[0]][edge[1]][var_name] for edge in edge_list])
+        except KeyError as e:
+            raise ParameterNotSetError(f"'{var_name}' has not been set yet using `set_state_var`.") from e
 
-    def update_resistance(self) -> None:
+    def update_resistance(
+        self, 
+        state_var_vals: npt.ArrayLike | list[npt.ArrayLike], 
+        edge_list: list[NWNEdge]
+    ) -> None:
         """
         Update the resistance of the nanowire network based on the current state
         variables.
 
         """
-        # args = 
+        if not isinstance(state_var_vals, list):
+            state_var_vals = [state_var_vals]
 
-        # R = self.resistance_function(self, )
-        # attrs = {
-        #     edge: {"conductance": 1 / R[i]} for i, edge in enumerate(edge_list)   
-        # }
-        # nx.set_edge_attributes(self, attrs)
-        ...
+        R = self.resistance_function(self, *state_var_vals)
+        attrs = {
+            edge: {"conductance": 1 / R[i]} for i, edge in enumerate(edge_list)   
+        }
+        nx.set_edge_attributes(self, attrs)
         
-
 
     def __repr__(self) -> str:
         d = {
@@ -409,9 +415,6 @@ def create_NWN(
         [((key[0],), (key[1],)) for key in intersect_dict.keys()],
         conductance = conductance,
         capacitance = capacitance,
-        w = 0.0,
-        tau = 0.0,
-        epsilon = 0.0,
         type = "junction"
     )
     NWN.graph["loc"] = intersect_dict

@@ -171,9 +171,6 @@ def add_wires(
             [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
             conductance = conductance,
             capacitance = NWN.graph["junction_capacitance"],
-            w = 0.0,
-            tau = 0.0,
-            epsilon = 0.0,
             type = "junction"
         )
         NWN.graph["loc"].update(intersect_dict)
