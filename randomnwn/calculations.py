@@ -6,15 +6,19 @@
 # Author: Marcus Kasdorf
 # Date:   July 19, 2021
 
+from __future__ import annotations
+
 import numpy as np
 import numpy.typing as npt
 import scipy
 import networkx as nx
 from networkx.linalg import laplacian_matrix
-from typing import Tuple, Union
 
 from .typing import *
-from .nanowires import get_edge_indices, NanowireNetwork
+from .nanowires import get_edge_indices
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .nanowire_network import NanowireNetwork
 
 
 def get_connected_nodes(NWN: NanowireNetwork, connected: list[NWNNode]) -> set[NWNNode]:

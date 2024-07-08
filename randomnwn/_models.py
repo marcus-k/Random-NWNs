@@ -12,22 +12,25 @@
 # Author: Marcus Kasdorf
 # Date:   July 28, 2021
 
+from __future__ import annotations
+
 import numpy as np
 import networkx as nx
 
-from typing import Callable, List, Union, Tuple
 from numbers import Number
 import numpy.typing as npt
 from .typing import *
-from .nanowires import NanowireNetwork
+from typing import Callable, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .nanowire_network import NanowireNetwork
 
 from .calculations import solve_network
 
 
 def resist_func(
     NWN: NanowireNetwork,
-    w: Union[float, npt.NDArray]
-) -> Union[float, npt.NDArray]:
+    w: float | npt.NDArray
+) -> float | npt.NDArray:
     """
     The HP group's resistance function in nondimensionalized form.
 

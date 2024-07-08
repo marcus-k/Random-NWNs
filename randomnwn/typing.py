@@ -6,7 +6,7 @@
 # Author: Marcus Kasdorf
 # Date:   July 8, 2024
 
-from typing import TypeAlias, TYPE_CHECKING
+from typing import TypeAlias
 
 JDANode: TypeAlias = tuple[int]
 MNRNode: TypeAlias = tuple[int, int]

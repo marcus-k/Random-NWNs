@@ -14,7 +14,7 @@ import networkx as nx
 
 from .line_functions import find_intersects
 from .units import get_units
-from .nanowires import NanowireNetwork
+from .nanowire_network import NanowireNetwork
 
 def create_NWN_from_txt(
     filename: str,

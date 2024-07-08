@@ -1,264 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Functions to create nanowire networks.
+# Functions to modify nanowire networks.
 # 
 # Author: Marcus Kasdorf
 # Date:   July 26, 2021
 
+from __future__ import annotations
+
 import numpy as np
-from shapely.geometry import LineString, Point
-import networkx as nx
-from collections import Counter
+from shapely.geometry import LineString
 
-from typing import Literal, Iterable
-from numbers import Number
 from .typing import *
+from typing import Iterable, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .nanowire_network import NanowireNetwork
 
-from .line_functions import (
-    create_line, find_intersects, find_line_intersects, add_points_to_line
-)
-from .units import get_units
-
-
-class NanowireNetwork(nx.Graph):
-    """
-    Internal nanowire network object. Should not be instantiated directly.
-    Use `create_NWN()` instead.
-
-    Parameters
-    ----------
-    incoming_graph_data : 
-        Data to initialize graph. Same as networkx.Graph object.
-
-    **attr
-        Keyword arguments. Same as networkx.Graph object.
-
-    """
-    def __init__(self, incoming_graph_data=None, **attr):
-        super().__init__(incoming_graph_data, **attr)
-
-    @property
-    def type(self) -> Literal["JDA", "MNR"]:
-        return self.graph["type"]
-    
-    @property
-    def electrodes(self) -> list[JDANode]:
-        return self.graph["electrode_list"]
-    
-    @property
-    def n_electrodes(self) -> int:
-        return len(self.electrodes)
-    
-    @property
-    def n_wires(self) -> int:
-        """Number of wires in the network. Does not include electrodes."""
-        return self.graph["wire_num"] - self.n_electrodes
-    
-    @property
-    def n_inner_junctions(self) -> int | None:
-        if self.type != "MNR":
-            return None
-        
-        _ = Counter(nx.get_edge_attributes(self, "type").values())
-        return _["inner"]
-    
-    @property
-    def n_wire_junctions(self) -> int:
-        _ = Counter(nx.get_edge_attributes(self, "type").values())
-        return _["junction"]
-    
-    @property
-    def units(self) -> dict[str, float]:
-        return self.graph["units"]
-    
-    @property
-    def lines(self) -> list[LineString]:
-        """List of LineStrings representing the nanowires. Includes electrodes."""
-        return self.graph["lines"]
-    
-    @property
-    def wire_density(self) -> float:
-        """Wire density in units of (l0)^-2. Does not include electrodes."""
-        return self.graph["wire_density"]
-    
-    @property
-    def loc(self) -> dict[tuple[int, int], Point]:
-        """Dictionary of wire junction locations."""
-        return self.graph["loc"]
-    
-    def get_index(self, node: NWNNode) -> int:
-        """Return the unique index of a node in the network."""
-        return self.graph["node_indices"][node]
-    
-    def get_node(self, index: int) -> NWNNode:
-        """Return the node corresponding to the index."""
-        try:
-            return next(k for k, v in self.graph["node_indices"].items() if v == index)
-        except StopIteration as e:
-            raise ValueError("given index does not have a node") from e
-    
-    def to_MNR(self) -> None:
-        convert_NWN_to_MNR(self)
-    
-    def __repr__(self) -> str:
-        d = {
-            "Type": self.type,
-            "Wires": self.n_wires,
-            "Electrodes": self.n_electrodes,
-            "Inner-wire junctions": self.n_inner_junctions,
-            "Wire junctions": self.n_wire_junctions,
-            "Length": f"{self.graph['length'] * self.units['l0']:#.4g} um ({self.graph['length']:#.4g} l0)",
-            "Width": f"{self.graph['width'] * self.units['l0']:#.4g} um ({self.graph['width']:#.4g} l0)",
-            "Wire Density": f"{self.graph['wire_density'] / self.units['l0']**2:#.4g} um^-2 ({self.graph['wire_density']:#.4g} l0^-2)"
-        }
-        # Get max key length
-        m = max(map(len, list(d.keys())))   
-
-        # Create string representation
-        s = "\n".join([f"{k:>{m}}: {v}" for k, v in d.items()])
-        return s
-
-
-def create_NWN(
-    wire_length: float = (7.0 / 7),
-    size: tuple | float = (50.0 / 7),
-    density: float = (0.3 * 7**2), 
-    seed: int = None,
-    conductance: float = (0.1 / 0.1),
-    capacitance: float = 1000,
-    diameter: float = (50.0 / 50.0),
-    resistivity: float = (22.6 / 22.6),
-    units: dict[str, float] = None
-) -> NanowireNetwork:
-    """
-    Create a nanowire network represented by a NetworkX graph. Wires are 
-    represented by the graph's vertices, while the wire junctions are 
-    represented by the graph's edges.
-
-    The nanowire network starts in the junction-dominated assumption (JDA), but
-    can be converted to the multi-nodal representation (MNR) after creation. 
-
-    The density may not be attainable with the given size, as there can only 
-    be a integer number of wires. Thus, the closest density to an integer 
-    number of wires is used.
-
-    See `units.py` for the units used by the parameters. 
-
-    Parameters
-    ----------
-    wire_length : float, optional
-        Length of each nanowire. Given in units of l0.
-
-    size : 2-tuple or float
-        The size of the nanowire network given in units of l0. If a tuple is
-        given, it is assumed to be (x-length, y-length). If a number is passed,
-        both dimensions will have the same length. The x direction is labeled
-        `length`, while the y direction is labeled `width`.
-
-    density : float, optional
-        Density of nanowires in the area determined by the width.
-        Given in units of (l0)^-2.
-
-    seed : int, optional
-        Seed for random nanowire generation.
-
-    conductance : float, optional
-        The junction conductance of the nanowires where they intersect.
-        Given in units of (Ron)^-1.
-
-    capacitance : float, optional
-        The junction capacitance of the nanowires where they intersect.
-        Given in microfarads. (Currently unused)
-
-    diameter : float, optional
-        The diameter of each nanowire. Given in units of D0.
-
-    resistivity : float, optional
-        The resistivity of each nanowire. Given in units of rho0.
-
-    units : dict, optional
-        Dictionary of custom base units. Defaults to None which will use the 
-        default units given in `units.py`
-
-    Returns
-    -------
-    NWN : Graph
-        The created random nanowire network.
-
-    """
-    # Convert size to length and width, size will be the area
-    if isinstance(size, tuple):
-        length, width = size
-        size = size[0] * size[1]
-    elif isinstance(size, Number):
-        length, width = size, size
-        size = size * size
-    else:
-        raise ValueError("Invalid size type.")
-
-    # Get closest density with an integer number of wires.
-    wire_num = round(size * density)
-    density = wire_num / size
-
-    # Get characteristic units
-    units = get_units(units)
-
-    # Create NWN graph
-    NWN = NanowireNetwork(
-        wire_length = wire_length,
-        length = length,
-        width = width, 
-        size = size,
-        wire_density = density, 
-        wire_num = wire_num,
-        junction_conductance = conductance,
-        junction_capacitance = capacitance,
-        wire_diameter = diameter,
-        wire_resistivity = resistivity,
-        electrode_list = [],
-        lines = [],
-        type = "JDA",
-        units = units,
-        tau = 0.0,
-        epsilon = 0.0,
-    )
-
-    # Create seeded random generator for testing
-    rng = np.random.default_rng(seed)
-
-    # Add the wires as nodes to the graph
-    for i in range(NWN.graph["wire_num"]):
-        NWN.graph["lines"].append(create_line(
-            NWN.graph["wire_length"], 
-            xmax = NWN.graph["length"], 
-            ymax = NWN.graph["width"], 
-            rng = rng
-        ))
-        NWN.add_node((i,), electrode=False)
-        
-    # Find intersects and create the edges (junctions)
-    intersect_dict = find_intersects(NWN.graph["lines"])
-    NWN.add_edges_from(
-        [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
-        conductance = conductance,
-        capacitance = capacitance,
-        w = 0.0,
-        tau = 0.0,
-        epsilon = 0.0,
-        type = "junction"
-    )
-    NWN.graph["loc"] = intersect_dict
-    
-    # Find junction density
-    NWN.graph["junction_density"] = len(intersect_dict) / size
-
-    # Create index lookup
-    NWN.graph["node_indices"] = {
-        node: ind for ind, node in enumerate(sorted(NWN.nodes()))
-    }
-
-    return NWN
+from .line_functions import find_line_intersects, add_points_to_line
 
 
 def convert_NWN_to_MNR(NWN: NanowireNetwork):
@@ -425,6 +183,9 @@ def add_wires(
 
     # Update wire density
     NWN.graph["wire_density"] = (NWN.graph["wire_num"] - len(NWN.graph["electrode_list"])) / NWN.graph["size"]
+
+    # Clear current junction list
+    del NWN.wire_junctions
 
     return new_wire_nodes
 
