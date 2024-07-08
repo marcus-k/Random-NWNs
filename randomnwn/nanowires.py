@@ -6,12 +6,14 @@
 # Author: Marcus Kasdorf
 # Date:   July 26, 2021
 
-from typing import List, Literal, Tuple, Union, Iterable
-from numbers import Number
 import numpy as np
 from shapely.geometry import LineString, Point
 import networkx as nx
 from collections import Counter
+
+from typing import Literal, Iterable
+from numbers import Number
+from .typing import *
 
 from .line_functions import (
     create_line, find_intersects, find_line_intersects, add_points_to_line
@@ -41,7 +43,7 @@ class _NWN(nx.Graph):
         return self.graph["type"]
     
     @property
-    def electrodes(self) -> list[tuple]:
+    def electrodes(self) -> list[JDANode]:
         return self.graph["electrode_list"]
     
     @property
@@ -81,15 +83,15 @@ class _NWN(nx.Graph):
         return self.graph["wire_density"]
     
     @property
-    def loc(self) -> dict[tuple, Point]:
+    def loc(self) -> dict[tuple[int, int], Point]:
         """Dictionary of wire junction locations."""
         return self.graph["loc"]
     
-    def get_index(self, node: tuple) -> dict[tuple, int]:
+    def get_index(self, node: NWNNode) -> int:
         """Return the unique index of a node in the network."""
         return self.graph["node_indices"][node]
     
-    def get_node(self, index: int) -> tuple:
+    def get_node(self, index: int) -> NWNNode:
         """Return the node corresponding to the index."""
         try:
             return next(k for k, v in self.graph["node_indices"].items() if v == index)
@@ -120,7 +122,7 @@ class _NWN(nx.Graph):
 
 def create_NWN(
     wire_length: float = (7.0 / 7),
-    size: Union[tuple, float] = (50.0 / 7),
+    size: tuple | float = (50.0 / 7),
     density: float = (0.3 * 7**2), 
     seed: int = None,
     conductance: float = (0.1 / 0.1),
@@ -259,7 +261,7 @@ def create_NWN(
     return NWN
 
 
-def convert_NWN_to_MNR(NWN: nx.Graph):
+def convert_NWN_to_MNR(NWN: _NWN):
     """
     Converts a JDA NWN to an MNR NWN in-place.
 
@@ -339,11 +341,11 @@ def convert_NWN_to_MNR(NWN: nx.Graph):
 
 
 def add_wires(
-    NWN: nx.Graph, 
-    lines: List[LineString], 
-    electrodes: List[bool], 
+    NWN: _NWN, 
+    lines: list[LineString], 
+    electrodes: list[bool], 
     resistance: float = None
-) -> List[tuple]:
+) -> list[JDANode]:
     """
     Adds wires to a given nanowire network in-place. Returns the nodes of the 
     added wires in order.
@@ -427,7 +429,7 @@ def add_wires(
     return new_wire_nodes
 
 
-def add_electrodes(NWN: nx.Graph, *args)  -> List[tuple]:
+def add_electrodes(NWN: _NWN, *args)  -> list[JDANode]:
     """
     Convenience function for adding electrodes on the edges of a network 
     in-place. Returns the nodes of the added electrodes in order.
@@ -457,7 +459,7 @@ def add_electrodes(NWN: nx.Graph, *args)  -> List[tuple]:
     new_wire_nodes : list of tuples
         List of the newly added nodes. If strings were passed, the list
         follows the order passed. If iterables were passed, the list is
-        ordered from left-to-right or bottom-to-top concatented. 
+        ordered from left-to-right or bottom-to-top concatenated. 
 
     """
     length = NWN.graph["length"]
@@ -536,7 +538,7 @@ def add_electrodes(NWN: nx.Graph, *args)  -> List[tuple]:
     return new_wire_nodes
 
 
-def get_edge_indices(NWN: nx.Graph, edges: List[tuple]) -> Tuple[list, list]:
+def get_edge_indices(NWN: _NWN, edges: list[NWNEdge]) -> tuple[list, list]:
     """
     Given a NWN and a list of edges, returns two lists: one of the indices of
     the first nodes in the input edge list, and one of the second.

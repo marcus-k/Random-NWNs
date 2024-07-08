@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Typing definitions for randomnwn.
+# 
+# Author: Marcus Kasdorf
+# Date:   July 8, 2024
+
+from typing import TypeAlias, TYPE_CHECKING
+
+JDANode: TypeAlias = tuple[int]
+MNRNode: TypeAlias = tuple[int, int]
+NWNNode: TypeAlias = JDANode | MNRNode
+NWNEdge: TypeAlias = tuple[NWNNode, NWNNode]

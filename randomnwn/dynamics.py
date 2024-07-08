@@ -11,10 +11,12 @@ import networkx as nx
 from scipy.integrate import solve_ivp
 
 from numbers import Number
-from typing import Callable, List, Union, Tuple, Iterable
+from typing import Callable, Iterable
 from scipy.integrate._ivp.ivp import OdeResult
+import numpy.typing as npt
+from .typing import *
 
-from .nanowires import get_edge_indices
+from .nanowires import get_edge_indices, _NWN
 from .calculations import solve_drain_current, solve_network
 from ._models import (
     resist_func,
@@ -25,17 +27,17 @@ from ._models import (
 
 
 def solve_evolution(
-    NWN: nx.Graph, 
-    t_eval: np.ndarray,
-    source_node: Union[Tuple, List[Tuple]], 
-    drain_node: Union[Tuple, List[Tuple]], 
+    NWN: _NWN, 
+    t_eval: npt.NDArray,
+    source_node: NWNNode | list[NWNNode], 
+    drain_node: NWNNode | list[NWNNode], 
     voltage_func: Callable,
     window_func: Callable = None,
     tol: float = 1e-12,
     model: str = "default",
     solver: str = "spsolve",
     **kwargs
-) -> Tuple[OdeResult, List[Tuple]]:
+) -> tuple[OdeResult, list[NWNEdge]]:
     """
     Solve for the state variables `w` of the junctions of the given nanowire
     network at various points in time with an applied voltage.
@@ -79,7 +81,7 @@ def solve_evolution(
     Returns
     -------
     sol : OdeResult
-        Output from `scipy.intergrate.solve_ivp`. See the SciPy documentation
+        Output from `scipy.integrate.solve_ivp`. See the SciPy documentation
         for information on this output's formatting.
 
     edge_list : list of tuples
@@ -144,7 +146,7 @@ def solve_evolution(
     return sol, edge_list
 
 
-def set_state_variables(NWN: nx.Graph, *args):
+def set_state_variables(NWN: _NWN, *args):
     """
     Sets the given nanowire network's state variable. Can be called in the
     following ways:
@@ -288,16 +290,16 @@ def set_state_variables(NWN: nx.Graph, *args):
 
 
 def get_evolution_current(
-    NWN: nx.Graph, 
+    NWN: _NWN, 
     sol: OdeResult, 
-    edge_list: List[Tuple], 
-    source_node: Union[Tuple, List[Tuple]], 
-    drain_node: Union[Tuple, List[Tuple]], 
+    edge_list: list[NWNEdge], 
+    source_node: NWNNode | list[NWNNode], 
+    drain_node: NWNNode | list[NWNNode], 
     voltage_func: Callable,
     scaled: bool = False,
     solver: str = "spsolve",
     **kwargs
-) -> np.ndarray:
+) -> npt.NDArray:
     """
     To be used in conjunction with `solve_evolution`. Takes the output from
     `solve_evolution` and finds the current passing through each drain node
@@ -365,13 +367,13 @@ def get_evolution_current(
 def get_evolution_node_voltages(
     NWN: nx.Graph, 
     sol: OdeResult, 
-    edge_list: list[tuple], 
-    source_node: tuple | list[tuple],
-    drain_node: tuple | list[tuple],
+    edge_list: list[NWNEdge], 
+    source_node: NWNNode | list[NWNNode],
+    drain_node: NWNNode | list[NWNNode],
     voltage_func: Callable,
     solver: str = "spsolve",
     **kwargs
-) -> np.ndarray:
+) -> npt.NDArray:
     """
     To be used in conjunction with `solve_evolution`. Takes the output from
     `solve_evolution` and finds the voltage of all nodes in the network at each

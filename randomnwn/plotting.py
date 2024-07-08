@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import matplotlib as mpl
 
-from typing import Tuple
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
@@ -25,7 +24,7 @@ def plot_NWN(
     grid: bool = True,
     xlabel: str = "",
     ylabel: str = "",
-) -> Tuple[Figure, Axes]:
+) -> tuple[Figure, Axes]:
     """
     Plots a given nanowire network and returns the figure and axes.
 
@@ -35,7 +34,7 @@ def plot_NWN(
         Nanowire network to plot.
 
     intersections : bool, optional
-        Whether or not to scatter plot the interesections as well.
+        Whether or not to scatter plot the intersections as well.
         Defaults to true.
 
     rnd_color : bool, optional
@@ -115,7 +114,7 @@ def draw_NWN(
     edge_colors: np.ndarray = None,
     cbar_label: str = "Colorbar",
     cmap = plt.cm.RdYlBu_r,
-) -> Tuple[Figure, Axes]:
+) -> tuple[Figure, Axes]:
     """
     Draw the given nanowire network as a networkx graph. JDA drawing is more
     detailed as nodes can be given spacial locations. With MNR drawing, nodes

@@ -6,7 +6,6 @@
 # Author: Marcus Kasdorf
 # Date:   May 20, 2021
 
-from typing import List, Dict, Tuple
 import numpy as np
 from numpy.random import uniform
 from shapely.geometry import LineString, Point
@@ -59,7 +58,7 @@ def create_line(length=1, xmin=0, xmax=1, ymin=0, ymax=1, rng=None) -> LineStrin
     return out
 
 
-def find_intersects(lines: list) -> Dict[Tuple[int, int], Point]:
+def find_intersects(lines: list) -> dict[tuple[int, int], Point]:
     """
     Given a list of LineStrings, finds all the lines that intersect and where.
 
@@ -88,7 +87,7 @@ def find_intersects(lines: list) -> Dict[Tuple[int, int], Point]:
     return out
 
 
-def find_line_intersects(ind: int, lines: List[LineString]) -> Dict[Tuple[int, int], Point]:
+def find_line_intersects(ind: int, lines: list[LineString]) -> dict[tuple[int, int], Point]:
     """
     Given a list of LineStrings, find all the lines that intersect
     with a specified line in the list given by the index ``ind``.
@@ -111,7 +110,7 @@ def find_line_intersects(ind: int, lines: List[LineString]) -> Dict[Tuple[int, i
     return out
 
 
-def add_points_to_line(line: LineString, points: List[Point], return_ordering=False):
+def add_points_to_line(line: LineString, points: list[Point], return_ordering=False):
     """
     Given a list of points and a line, add the projected points to the line.
 
