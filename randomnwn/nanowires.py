@@ -6,16 +6,116 @@
 # Author: Marcus Kasdorf
 # Date:   July 26, 2021
 
-from typing import List, Tuple, Union, Iterable, Dict
+from typing import List, Literal, Tuple, Union, Iterable
 from numbers import Number
 import numpy as np
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 import networkx as nx
+from collections import Counter
 
 from .line_functions import (
     create_line, find_intersects, find_line_intersects, add_points_to_line
 )
 from .units import get_units
+
+
+class _NWN(nx.Graph):
+    """
+    Internal nanowire network object. Should not be instantiated directly.
+    Use `create_NWN()` instead.
+
+    Parameters
+    ----------
+    incoming_graph_data : 
+        Data to initialize graph. Same as networkx.Graph object.
+
+    **attr
+        Keyword arguments. Same as networkx.Graph object.
+
+    """
+    def __init__(self, incoming_graph_data=None, **attr):
+        super().__init__(incoming_graph_data, **attr)
+
+    @property
+    def type(self) -> Literal["JDA", "MNR"]:
+        return self.graph["type"]
+    
+    @property
+    def electrodes(self) -> list[tuple]:
+        return self.graph["electrode_list"]
+    
+    @property
+    def n_electrodes(self) -> int:
+        return len(self.electrodes)
+    
+    @property
+    def n_wires(self) -> int:
+        """Number of wires in the network. Does not include electrodes."""
+        return self.graph["wire_num"] - self.n_electrodes
+    
+    @property
+    def n_inner_junctions(self) -> int | None:
+        if self.type != "MNR":
+            return None
+        
+        _ = Counter(nx.get_edge_attributes(self, "type").values())
+        return _["inner"]
+    
+    @property
+    def n_wire_junctions(self) -> int:
+        _ = Counter(nx.get_edge_attributes(self, "type").values())
+        return _["junction"]
+    
+    @property
+    def units(self) -> dict[str, float]:
+        return self.graph["units"]
+    
+    @property
+    def lines(self) -> list[LineString]:
+        """List of LineStrings representing the nanowires. Includes electrodes."""
+        return self.graph["lines"]
+    
+    @property
+    def wire_density(self) -> float:
+        """Wire density in units of (l0)^-2. Does not include electrodes."""
+        return self.graph["wire_density"]
+    
+    @property
+    def loc(self) -> dict[tuple, Point]:
+        """Dictionary of wire junction locations."""
+        return self.graph["loc"]
+    
+    def get_index(self, node: tuple) -> dict[tuple, int]:
+        """Return the unique index of a node in the network."""
+        return self.graph["node_indices"][node]
+    
+    def get_node(self, index: int) -> tuple:
+        """Return the node corresponding to the index."""
+        try:
+            return next(k for k, v in self.graph["node_indices"].items() if v == index)
+        except StopIteration as e:
+            raise ValueError("given index does not have a node") from e
+    
+    def to_MNR(self) -> None:
+        convert_NWN_to_MNR(self)
+    
+    def __repr__(self) -> str:
+        d = {
+            "Type": self.type,
+            "Wires": self.n_wires,
+            "Electrodes": self.n_electrodes,
+            "Inner-wire junctions": self.n_inner_junctions,
+            "Wire junctions": self.n_wire_junctions,
+            "Length": f"{self.graph['length'] * self.units['l0']:#.4g} um ({self.graph['length']:#.4g} l0)",
+            "Width": f"{self.graph['width'] * self.units['l0']:#.4g} um ({self.graph['width']:#.4g} l0)",
+            "Wire Density": f"{self.graph['wire_density'] / self.units['l0']**2:#.4g} um^-2 ({self.graph['wire_density']:#.4g} l0^-2)"
+        }
+        # Get max key length
+        m = max(map(len, list(d.keys())))   
+
+        # Create string representation
+        s = "\n".join([f"{k:>{m}}: {v}" for k, v in d.items()])
+        return s
 
 
 def create_NWN(
@@ -27,8 +127,8 @@ def create_NWN(
     capacitance: float = 1000,
     diameter: float = (50.0 / 50.0),
     resistivity: float = (22.6 / 22.6),
-    units: Dict[str, float] = None
-) -> nx.Graph:
+    units: dict[str, float] = None
+) -> _NWN:
     """
     Create a nanowire network represented by a NetworkX graph. Wires are 
     represented by the graph's vertices, while the wire junctions are 
@@ -103,7 +203,7 @@ def create_NWN(
     units = get_units(units)
 
     # Create NWN graph
-    NWN = nx.Graph(
+    NWN = _NWN(
         wire_length = wire_length,
         length = length,
         width = width, 
