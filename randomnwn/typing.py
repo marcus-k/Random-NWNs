@@ -12,3 +12,5 @@ JDANode: TypeAlias = tuple[int]
 MNRNode: TypeAlias = tuple[int, int]
 NWNNode: TypeAlias = JDANode | MNRNode
 NWNEdge: TypeAlias = tuple[NWNNode, NWNNode]
+NWNNodeIndex: TypeAlias = int
+NWNEdgeIndex: TypeAlias = tuple[NWNNodeIndex, NWNNodeIndex]

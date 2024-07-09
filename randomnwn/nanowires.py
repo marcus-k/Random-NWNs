@@ -296,7 +296,7 @@ def add_electrodes(NWN: NanowireNetwork, *args)  -> list[JDANode]:
     return new_wire_nodes
 
 
-def get_edge_indices(NWN: NanowireNetwork, edges: list[NWNEdge]) -> tuple[list, list]:
+def get_edge_indices(NWN: NanowireNetwork, edges: list[NWNEdge]) -> tuple[list[NWNNodeIndex], list[NWNNodeIndex]]:
     """
     Given a NWN and a list of edges, returns two lists: one of the indices of
     the first nodes in the input edge list, and one of the second.
