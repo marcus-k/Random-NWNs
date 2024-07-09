@@ -162,6 +162,7 @@ class NanowireNetwork(nx.Graph):
 
         You can also pass the string "linear" to choose a default linear
         resistance function based on the state variable w in [0, 1].
+
         """
         return self._resist_func
 
@@ -259,10 +260,25 @@ class NanowireNetwork(nx.Graph):
         edge_list: list[NWNEdge]
     ) -> None:
         """
-        Update the resistance of the nanowire network based on the current state
-        variables.
+        Update the resistance of the nanowire network based on the provided
+        state variable values. The resistance function should be set before 
+        calling this method.
+
+        Parameters
+        ----------
+        state_var_vals : ndarray or list of ndarrays
+            Values of the state variables to use in the resistance function.
+            The should be in the same order as the state variables. If the
+            resistance function takes multiple state variables, pass a list of
+            arrays in the same order as `NanowireNetwork.state_vars`.
+
+        edge_list : list of edges
+            List of edges to update the resistance for.
 
         """
+        if self.resistance_function is None:
+            raise ParameterNotSetError("Resistance function attribute must be set before updating resistance.")
+
         if not isinstance(state_var_vals, list):
             state_var_vals = [state_var_vals]
 
