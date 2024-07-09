@@ -11,17 +11,24 @@ from __future__ import annotations
 import networkx as nx
 import numpy as np
 from collections import Counter
+from scipy.integrate import solve_ivp
 
 import numpy.typing as npt
-from typing import Callable, Literal, TypeAlias, Any
+from scipy.integrate._ivp.ivp import OdeResult
+from typing import Callable, Literal, Any
 from shapely.geometry import LineString, Point
 from numbers import Number
 from .typing import *
 
 from .units import get_units
-from ._models import resist_func
 from .line_functions import create_line, find_intersects
 from .nanowires import convert_NWN_to_MNR
+from ._models import (
+    resist_func,
+    _HP_model_no_decay,
+    _HP_model_decay,
+    _HP_model_chen,
+)
 
 
 class ParameterNotSetError(Exception):
@@ -59,7 +66,8 @@ class NanowireNetwork(nx.Graph):
     def __init__(self, incoming_graph_data=None, **attr):
         super().__init__(incoming_graph_data, **attr)
         self._resist_func = None
-        self._state_vars = []
+        self._state_vars: list[str] = []
+        self._state_vars_is_set: list[bool] = []
         self._wire_junctions = None
 
     @property
@@ -107,20 +115,27 @@ class NanowireNetwork(nx.Graph):
         return self.graph["wire_density"]
 
     @property
-    def loc(self) -> dict[tuple[int, int], Point]:
+    def loc(self) -> dict[NWNNode, Point]:
         """Dictionary of wire junction locations."""
         return self.graph["loc"]
 
-    def get_index(self, node: NWNNode) -> int:
+    def get_index(self, node: NWNNode | list[NWNNode]) -> NWNNodeIndex:
         """Return the unique index of a node in the network."""
         return self.graph["node_indices"][node]
 
-    def get_node(self, index: int) -> NWNNode:
+    def get_node(self, index: NWNNodeIndex) -> NWNNode:
         """Return the node corresponding to the index."""
         try:
             return next(k for k, v in self.graph["node_indices"].items() if v == index)
         except StopIteration as e:
             raise ValueError("given index does not have a node") from e
+
+    def get_index_from_edge(self, edge: NWNEdge | list[NWNEdge]) -> NWNEdgeIndex | list[NWNEdgeIndex]:
+        """Return the indices of the nodes in the edge as a tuple."""
+        if isinstance(edge, list):
+            return [tuple(map(self.get_index, e)) for e in edge]
+        else:
+            return tuple(map(self.get_index, edge))
 
     def to_MNR(self) -> None:
         convert_NWN_to_MNR(self)
@@ -149,6 +164,7 @@ class NanowireNetwork(nx.Graph):
     @state_vars.setter
     def state_vars(self, names: list[str]) -> None:
         self._state_vars = names
+        self._state_vars_is_set = {name: False for name in names}
 
     @property
     def resistance_function(
@@ -162,6 +178,9 @@ class NanowireNetwork(nx.Graph):
 
         You can also pass the string "linear" to choose a default linear
         resistance function based on the state variable w in [0, 1].
+
+        The resistance should be nondimensionalized, i.e. the resistance should
+        be in units of Ron.
 
         """
         return self._resist_func
@@ -194,6 +213,11 @@ class NanowireNetwork(nx.Graph):
         value : ndarray or scalar
             Value to set the state variable(s) to.
 
+        edge_list : list of edges, optional
+            List of edges to set the state variable for. If None, all wire
+            junction edges will be used. Should be the same length as the value
+            array.
+
         """
         value = np.atleast_1d(value)
 
@@ -203,21 +227,27 @@ class NanowireNetwork(nx.Graph):
                 f"'{var_name}' is not in {cls.__qualname__}.state_vars (currently is {self.state_vars})."
                 f"\nDid you set it using {cls.__qualname__}.state_vars = ['{var_name}', ...]?"
             )
+        
+        edge_list = self.wire_junctions if edge_list is None else edge_list
 
-        # Set the state variable for all edges
-        if edge_list is None and value.size == 1:
+        # Set the state variable for the given edges to the same value...
+        if value.size == 1:
             nx.set_edge_attributes(self, {
-                edge: {var_name: value[0]} for edge in self.wire_junctions
+                edge: {var_name: value[0]} for edge in edge_list
             })
 
-        # Set the state variable for a subset of edges
-        elif len(edge_list) == value.size:
+        # or to different values
+        elif value.size == len(edge_list):
             nx.set_edge_attributes(self, {
                 edge: {var_name: value[i]} for i, edge in enumerate(edge_list)
             })
 
         else:
-            raise ValueError("Length of edge_list does not match the length of the value array.")
+            raise ValueError(
+                f"Length of value array ({value.size}) does not match the number of edges ({len(edge_list)})."
+            )
+        
+        self._state_vars_is_set[var_name] = True
         
     def get_state_var(self, var_name: str, edge_list: list[NWNEdge] | None = None) -> npt.ArrayLike:
         """
@@ -230,8 +260,8 @@ class NanowireNetwork(nx.Graph):
             Name of the state variable(s) to get.
 
         edge_list : list of edges, optional
-            List of edges to get the state variable from. If None, all edges
-            will be used.
+            List of edges to get the state variable from. If None, all wire
+            junction edges will be used.
 
         Returns
         -------
@@ -257,7 +287,7 @@ class NanowireNetwork(nx.Graph):
     def update_resistance(
         self, 
         state_var_vals: npt.ArrayLike | list[npt.ArrayLike], 
-        edge_list: list[NWNEdge]
+        edge_list: list[NWNEdge] | None = None
     ) -> None:
         """
         Update the resistance of the nanowire network based on the provided
@@ -267,13 +297,21 @@ class NanowireNetwork(nx.Graph):
         Parameters
         ----------
         state_var_vals : ndarray or list of ndarrays
-            Values of the state variables to use in the resistance function.
-            The should be in the same order as the state variables. If the
-            resistance function takes multiple state variables, pass a list of
-            arrays in the same order as `NanowireNetwork.state_vars`.
+            An array of values of the state variables to use in the resistance 
+            function. The should be in the same order as the state variables. 
+            If the resistance function takes multiple state variables, pass a 
+            list of arrays in the same order as `NanowireNetwork.state_vars`.
 
-        edge_list : list of edges
-            List of edges to update the resistance for.
+        edge_list : list of edges, optional
+            List of edges to update the resistance for. If None, all wire
+            junction edges will be used. In this case, the length of the
+            `state_var_vals` array should be the same as the number of wire
+            junctions.
+
+        Returns
+        -------
+        ndarray
+            Array of updated resistance values for each edge in the edge_list.
 
         """
         if self.resistance_function is None:
@@ -282,12 +320,139 @@ class NanowireNetwork(nx.Graph):
         if not isinstance(state_var_vals, list):
             state_var_vals = [state_var_vals]
 
+        if edge_list is None:
+            edge_list = self.wire_junctions
+
         R = self.resistance_function(self, *state_var_vals)
         attrs = {
             edge: {"conductance": 1 / R[i]} for i, edge in enumerate(edge_list)   
         }
         nx.set_edge_attributes(self, attrs)
+
+        return R
+
+    def evolve(
+        self,
+        state_vars: list[str],
+        model: str | Callable,
+        t_eval: npt.NDArray,
+        source_node: NWNNode | list[NWNNode] = None,
+        drain_node: NWNNode | list[NWNNode] = None,
+        voltage_func: Callable[[npt.ArrayLike], npt.ArrayLike] = None,
+        window_func: Callable[[npt.ArrayLike], npt.ArrayLike] = None,
+        *,
+        args: tuple[Any, ...] = (),
+        solver: str = "spsolve",
+        spsolve_kwargs: dict = {},
+        ivp_options: dict = {},
+    ) -> OdeResult:
+        """
+        Evolve the nanowire network using the given model and state variables.
+        Returns the solution of the initial value problem solver from scipy
+        at the given time points.
+
+        Parameters
+        ----------
+        state_vars : list of str
+            List of state variables to evolve.
+
+        model : str or callable
+            Model to use for the evolution. One of ["default", "decay", "chen"]
+            can be chosen. If a function is given, it should have the calling
+            signature `func(t, y, *args)` where `t` is the time, `y` is the
+            state variable(s), and `args` are any additional arguments.
+
+        t_eval : ndarray
+            Time points to evaluate the solution at.
+
+        source_node : node or list of nodes, optional
+            Source node(s) of the network. Needed if you chose one of the 
+            built-in models listed in the `model` parameter.
+
+        drain_node : node or list of nodes, optional
+            Drain node(s) of the network. Needed if you chose one of the 
+            built-in models listed in the `model` parameter.
+
+        voltage_func : callable, optional
+            Function that returns the voltage at the given time. Should have
+            the calling signature `func(t)` where `t` is the time. Needed if 
+            you chose one of the built-in models listed in the `model` 
+            parameter.
+
+        window_func : callable, optional
+            Window function for the built-in models. Should have the calling
+            signature `func(w)` where `w` is the state variable. Needed if you
+            chose one of the built-in models listed in the `model` parameter.
+
+        args : tuple, optional
+            Additional arguments to pass to the model function. Most likely, 
+            you will need to provide args for the source node(s), drain node(s) 
+            and voltage function. The start and end node indices would also be 
+            beneficial to provide for improved performance.
+
+        solver : str, optional
+            Sparse matrix solver function name. Defaults to "spsolve".
+
+        spsolve_kwargs : dict, optional
+            Additional keyword arguments to pass to the sparse matrix solver.
+
+        ivp_options : dict, optional
+            Additional keyword arguments to pass to the IVP solver.
         
+        """
+        # Get state variable derivative function
+        impl_models = {
+            "default": _HP_model_no_decay, 
+            "decay": _HP_model_decay, 
+            "chen": _HP_model_chen
+        }
+        if model in impl_models.keys():
+            deriv = impl_models[model]
+        elif callable(model):
+            deriv = model
+        else:
+            raise NotImplementedError(f"Model '{model}' not found.")
+
+        # Check if state variables are set
+        if not all([self._state_vars_is_set[var] for var in state_vars]):
+            raise ParameterNotSetError("Not all state variables have not been set yet.")
+        
+        # Get initial state variable, if there are more than one, they 
+        # will be concatenated.
+        y0 = np.hstack([self.get_state_var(var) for var in state_vars])
+
+        # Set the tolerance value for the IVP solver
+        if "atol" not in ivp_options.keys():
+            ivp_options["atol"] = 1e-7
+        if "rtol" not in ivp_options.keys():
+            ivp_options["rtol"] = 1e-7
+
+        t_span = (t_eval[0], t_eval[-1])
+
+        # Setup IVP args for the solver
+        if model in impl_models.keys():
+            edge_list = self.wire_junctions
+            start_nodes, end_nodes = np.asarray(
+                self.get_index_from_edge(self.wire_junctions)
+            ).T
+            if not callable(window_func):
+                raise ValueError("To use a built-in model, a window function must be provided.")
+            args = (
+                self, source_node, drain_node, voltage_func, edge_list, 
+                start_nodes, end_nodes, window_func, solver, spsolve_kwargs
+            )
+
+        # Solve how the state variables change over time
+        sol = solve_ivp(
+            deriv, t_span, y0, "DOP853", t_eval, args=args, **ivp_options
+        )
+
+        # Update the state variables
+        split = np.split(sol.y[:, -1], len(state_vars))
+        for var, new_vals in zip(state_vars, split):
+            self.set_state_var(var, new_vals)
+
+        return sol
 
     def __repr__(self) -> str:
         d = {

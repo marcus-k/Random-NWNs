@@ -17,7 +17,6 @@ from __future__ import annotations
 import numpy as np
 import networkx as nx
 
-from numbers import Number
 import numpy.typing as npt
 from .typing import *
 from typing import Callable, TYPE_CHECKING
@@ -213,7 +212,7 @@ def _HP_model_chen(
     return dydt
 
 
-def set_chen_params(NWN: NanowireNetwork, sigma: Number, theta: Number, a: Number):
+def set_chen_params(NWN: NanowireNetwork, sigma, theta, a):
     NWN.graph["sigma"] = sigma
     NWN.graph["theta"] = theta
     NWN.graph["a"] = a

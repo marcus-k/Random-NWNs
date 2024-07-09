@@ -113,3 +113,16 @@ def test_MNR_node_count(NWN, request):
         + n_isolated_wires
     
     assert node_count == NWN.number_of_nodes()
+
+
+@pytest.mark.parametrize("NWN", ["NWN_benchmark_JDA", "NWN_benchmark_MNR", "NWN_test1"])
+def test_NWN_edge_indices(NWN, request):
+    NWN = request.getfixturevalue(NWN)
+
+    # Get edge indices
+    start1, end1 = map(np.asarray, get_edge_indices(NWN, NWN.wire_junctions))
+    start2, end2 = np.asarray(NWN.get_index_from_edge(NWN.wire_junctions)).T
+
+    # Check if the edge indices are the same
+    assert np.all(start1 == start2)
+    assert np.all(end1 == end2)

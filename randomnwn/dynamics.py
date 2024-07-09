@@ -28,31 +28,6 @@ from ._models import (
 )
 
 
-def evolve(
-    NWN: NanowireNetwork,
-    state_vars: list[str],
-    y0: npt.NDArray,
-    model: str | Callable,
-    t_eval: npt.NDArray,
-    source_node: NWNNode | list[NWNNode],
-    drain_node: NWNNode | list[NWNNode],
-    voltage_func: Callable[[npt.ArrayLike], npt.ArrayLike],
-    ivp_kwargs: dict = {},
-) -> tuple[OdeResult, list[NWNEdge]]:
-    """
-    Test
-    
-    """
-    # Get state variable derivative function
-    impl_models = {
-        "default": _HP_model_no_decay, 
-        "decay": _HP_model_decay, 
-        "chen": _HP_model_chen
-    }
-    deriv = impl_models.get(model, model)
-
-
-
 def solve_evolution(
     NWN: NanowireNetwork, 
     t_eval: npt.NDArray,
