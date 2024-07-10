@@ -111,7 +111,6 @@ def create_NWN_from_txt(
         [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
         conductance = conductance,
         capacitance = None,
-        w = 0.0,
         type = "junction"
     )
     NWN.graph["loc"] = intersect_dict
