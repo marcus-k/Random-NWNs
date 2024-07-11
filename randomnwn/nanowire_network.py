@@ -12,6 +12,7 @@ import networkx as nx
 import numpy as np
 from collections import Counter
 from scipy.integrate import solve_ivp
+from functools import lru_cache
 
 import numpy.typing as npt
 from scipy.integrate._ivp.ivp import OdeResult
@@ -156,6 +157,16 @@ class NanowireNetwork(nx.Graph):
     @wire_junctions.deleter
     def wire_junctions(self) -> None:
         self._wire_junctions = None
+        self.wire_junction_indices.cache_clear()
+
+    @lru_cache
+    def wire_junction_indices(self) -> tuple[list[NWNNodeIndex], list[NWNNodeIndex]]:
+        """
+        Return the start and end indices of the nodes in the wire junctions 
+        as a tuple.
+        
+        """
+        return np.asarray(self.get_index_from_edge(self.wire_junctions)).T
     
     @property
     def state_vars(self) -> list[str]:
