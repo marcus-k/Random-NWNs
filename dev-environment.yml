@@ -4,6 +4,7 @@ channels:
 dependencies:
   - ipykernel
   - joblib
+  - dill
   - line_profiler
   - matplotlib=3.8.4
   - networkx=3.1

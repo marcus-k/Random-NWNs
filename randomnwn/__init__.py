@@ -12,8 +12,9 @@ or:
 """
 from .version import __version__
 
+from .nanowire_network import create_NWN
+
 from .nanowires import (
-    create_NWN,
     convert_NWN_to_MNR,
     add_wires,
     add_electrodes,

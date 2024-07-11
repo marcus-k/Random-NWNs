@@ -6,16 +6,22 @@
 # Author: Marcus Kasdorf
 # Date:   July 19, 2021
 
+from __future__ import annotations
+
 import numpy as np
+import numpy.typing as npt
 import scipy
 import networkx as nx
 from networkx.linalg import laplacian_matrix
-from typing import List, Tuple, Set, Union
 
+from .typing import *
 from .nanowires import get_edge_indices
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .nanowire_network import NanowireNetwork
 
 
-def get_connected_nodes(NWN: nx.Graph, connected: List[Tuple]) -> Set[Tuple]:
+def get_connected_nodes(NWN: NanowireNetwork, connected: list[NWNNode]) -> set[NWNNode]:
     """
     Returns a list of nodes which are connected to any of the given nodes.
 
@@ -28,10 +34,10 @@ def get_connected_nodes(NWN: nx.Graph, connected: List[Tuple]) -> Set[Tuple]:
 
 
 def create_matrix(
-    NWN: nx.Graph,
+    NWN: NanowireNetwork,
     value_type: str = "conductance",
-    source_nodes: List[Tuple] = None,
-    drain_nodes: List[Tuple] = None,
+    source_nodes: list[NWNNode] = None,
+    drain_nodes: list[NWNNode] = None,
     ground_nodes: bool = False
 ) -> scipy.sparse.csr_matrix: 
     """
@@ -132,13 +138,13 @@ def _solver(A, z, solver, **kwargs):
 
 
 def _solve_voltage(
-    NWN: nx.Graph, 
+    NWN: NanowireNetwork, 
     voltage: float, 
-    source_nodes: List[Tuple], 
-    drain_nodes: List[Tuple],
+    source_nodes: list[NWNNode], 
+    drain_nodes: list[NWNNode],
     solver: str,
     **kwargs
-) -> np.ndarray:
+) -> npt.NDArray:
     """
     Solve for voltages at all the nodes for a given supplied voltage.
 
@@ -166,13 +172,13 @@ def _solve_voltage(
 
 
 def _solve_current(    
-    NWN: nx.Graph, 
+    NWN: NanowireNetwork, 
     current: float, 
-    source_nodes: List[Tuple], 
-    drain_nodes: List[Tuple],
+    source_nodes: list[NWNNode], 
+    drain_nodes: list[NWNNode],
     solver: str,
     **kwargs
-) -> np.ndarray:
+) -> npt.NDArray:
     """
     Solve for voltages at all the nodes for a given supplied current.
 
@@ -192,14 +198,14 @@ def _solve_current(
 
 
 def solve_network(
-    NWN: nx.Graph, 
-    source_node: Union[Tuple, List[Tuple]], 
-    drain_node: Union[Tuple, List[Tuple]], 
+    NWN: NanowireNetwork, 
+    source_node: NWNNode | list[NWNNode], 
+    drain_node: NWNNode | list[NWNNode], 
     input: float,
     type: str = "voltage",
     solver: str = "spsolve",
     **kwargs
-) -> np.ndarray:
+) -> npt.NDArray:
     """
     Solve for the voltages of each node in a given NWN. Each drain node will 
     be grounded. If the type is "voltage", each source node will be at the 
@@ -254,14 +260,14 @@ def solve_network(
 
 
 def solve_drain_current(
-    NWN: nx.Graph, 
-    source_node: Union[Tuple, List[Tuple]], 
-    drain_node: Union[Tuple, List[Tuple]], 
+    NWN: NanowireNetwork, 
+    source_node: NWNNode | list[NWNNode], 
+    drain_node: NWNNode | list[NWNNode], 
     voltage: float,
     scaled: bool = False,
     solver: str = "spsolve",
     **kwargs
-) -> np.ndarray:
+) -> npt.NDArray:
     """
     Solve for the current through each drain node of a NWN.
 
@@ -323,14 +329,14 @@ def solve_drain_current(
 
 
 def solve_nodal_current(
-    NWN: nx.Graph, 
-    source_node: Union[Tuple, List[Tuple]], 
-    drain_node: Union[Tuple, List[Tuple]], 
+    NWN: NanowireNetwork, 
+    source_node: NWNNode | list[NWNNode], 
+    drain_node: NWNNode | list[NWNNode], 
     voltage: float,
     scaled: bool = False,
     solver: str = "spsolve",
     **kwargs
-) -> np.ndarray:
+) -> npt.NDArray:
     """
     Solve for the current through each node of a NWN. It will appear that
     no current is flowing through source (drain) nodes for positive (negative)
@@ -393,14 +399,14 @@ def solve_nodal_current(
 
 
 def solve_edge_current(
-    NWN: nx.Graph, 
-    source_node: Union[Tuple, List[Tuple]], 
-    drain_node: Union[Tuple, List[Tuple]], 
+    NWN: NanowireNetwork, 
+    source_node: NWNNode | list[NWNNode], 
+    drain_node: NWNNode | list[NWNNode], 
     voltage: float,
     scaled: bool = False,
     solver: str = "spsolve",
     **kwargs
-) -> np.ndarray:
+) -> npt.NDArray:
     """
     Solve for the current through each node of a NWN. It will appear that
     no current is flowing through source (drain) nodes for positive (negative)
@@ -456,7 +462,7 @@ def solve_edge_current(
     return I
 
 
-def scale_sol(NWN: nx.Graph, sol: np.ndarray):
+def scale_sol(NWN: NanowireNetwork, sol: npt.NDArray) -> npt.NDArray:
     """
     Scale the voltage and current solutions by their characteristic values.
 

@@ -12,18 +12,24 @@
 # Author: Marcus Kasdorf
 # Date:   July 28, 2021
 
+from __future__ import annotations
+
 import numpy as np
 import networkx as nx
-from typing import Callable, List, Union, Tuple
-from numbers import Number
+
+import numpy.typing as npt
+from .typing import *
+from typing import Callable, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .nanowire_network import NanowireNetwork
 
 from .calculations import solve_network
 
 
 def resist_func(
-    NWN: nx.Graph,
-    w: Union[float, np.ndarray]
-) -> Union[float, np.ndarray]:
+    NWN: NanowireNetwork,
+    w: float | npt.NDArray
+) -> float | npt.NDArray:
     """
     The HP group's resistance function in nondimensionalized form.
 
@@ -48,10 +54,10 @@ def resist_func(
 
 def _HP_model_no_decay(
     t: float, 
-    w: np.ndarray,
-    NWN: nx.Graph,
-    source_node: Union[Tuple, List[Tuple]], 
-    drain_node: Union[Tuple, List[Tuple]],
+    w: npt.NDArray,
+    NWN: NanowireNetwork,
+    source_node: NWNNode | list[NWNNode], 
+    drain_node: NWNNode | list[NWNNode],
     voltage_func: Callable,
     edge_list: list,
     start_nodes: list,
@@ -59,7 +65,7 @@ def _HP_model_no_decay(
     window_func: Callable,
     solver: str = "spsolve",
     kwargs: dict = None
-) -> np.ndarray:
+) -> npt.NDArray:
     """
     Derivative of the nondimensionalized state variables `w`.
 
@@ -97,10 +103,10 @@ def _HP_model_no_decay(
 
 def _HP_model_decay(
     t: float, 
-    w: np.ndarray,
-    NWN: nx.Graph,
-    source_node: Union[Tuple, List[Tuple]], 
-    drain_node: Union[Tuple, List[Tuple]],
+    w: npt.NDArray,
+    NWN: NanowireNetwork,
+    source_node: NWNNode | list[NWNNode], 
+    drain_node: NWNNode | list[NWNNode],
     voltage_func: Callable,
     edge_list: list,
     start_nodes: list,
@@ -108,7 +114,7 @@ def _HP_model_decay(
     window_func: Callable,
     solver: str = "spsolve",
     kwargs: dict = None
-) -> np.ndarray:
+) -> npt.NDArray:
     """
     Derivative of the nondimensionalized state variables `w` with 
     decay value `tau`.
@@ -150,10 +156,10 @@ def _HP_model_decay(
 
 def _HP_model_chen(
     t: float, 
-    y: np.ndarray,
-    NWN: nx.Graph,
-    source_node: Union[Tuple, List[Tuple]], 
-    drain_node: Union[Tuple, List[Tuple]],
+    y: npt.NDArray,
+    NWN: NanowireNetwork,
+    source_node: NWNNode | list[NWNNode], 
+    drain_node: NWNNode | list[NWNNode],
     voltage_func: Callable,
     edge_list: list,
     start_nodes: list,
@@ -161,7 +167,7 @@ def _HP_model_chen(
     window_func: Callable,
     solver: str = "spsolve",
     kwargs: dict = None
-) -> np.ndarray:
+) -> npt.NDArray:
     """
     Derivative of the nondimensionalized state variables `w`, `tau`, and
     `epsilon`.
@@ -206,7 +212,7 @@ def _HP_model_chen(
     return dydt
 
 
-def set_chen_params(NWN: nx.Graph, sigma: Number, theta: Number, a: Number):
+def set_chen_params(NWN: NanowireNetwork, sigma, theta, a):
     NWN.graph["sigma"] = sigma
     NWN.graph["theta"] = theta
     NWN.graph["a"] = a

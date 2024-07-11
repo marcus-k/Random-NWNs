@@ -6,10 +6,7 @@
 # Author: Marcus Kasdorf
 # Date:   July 1, 2021
 
-from typing import Dict
-
-
-def get_units(new_units: Dict[str, float] = None) -> Dict[str, float]:
+def get_units(new_units: dict[str, float] = None) -> dict[str, float]:
     """
     Returns the characteristic units for a nanowire network.
 

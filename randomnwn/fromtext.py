@@ -14,6 +14,7 @@ import networkx as nx
 
 from .line_functions import find_intersects
 from .units import get_units
+from .nanowire_network import NanowireNetwork
 
 def create_NWN_from_txt(
     filename: str,
@@ -21,7 +22,7 @@ def create_NWN_from_txt(
     diameter: float = 1.0,
     resistivity: float = 1.0,
     units: Dict[str, float] = None
-) -> nx.Graph:
+) -> NanowireNetwork:
     """
     Create a nanowire network represented by a NetworkX graph. Wires are 
     represented by the graph's vertices, while the wire junctions are 
@@ -78,7 +79,7 @@ def create_NWN_from_txt(
     units = get_units(units)
 
     # Create NWN graph
-    NWN = nx.Graph(
+    NWN = NanowireNetwork(
         wire_length = None,
         length = length,
         width = width, 
@@ -110,7 +111,6 @@ def create_NWN_from_txt(
         [((key[0],), (key[1],)) for key in intersect_dict.keys()], 
         conductance = conductance,
         capacitance = None,
-        w = 0.0,
         type = "junction"
     )
     NWN.graph["loc"] = intersect_dict
