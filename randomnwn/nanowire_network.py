@@ -162,8 +162,8 @@ class NanowireNetwork(nx.Graph):
     @lru_cache
     def wire_junction_indices(self) -> tuple[list[NWNNodeIndex], list[NWNNodeIndex]]:
         """
-        Return the start and end indices of the nodes in the wire junctions 
-        as a tuple.
+        Return the start and end indices of the wire junctions in the network
+        as a tuple of lists.
         
         """
         return np.asarray(self.get_index_from_edge(self.wire_junctions)).T
