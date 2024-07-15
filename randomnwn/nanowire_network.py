@@ -16,7 +16,7 @@ from functools import lru_cache
 
 import numpy.typing as npt
 from scipy.integrate._ivp.ivp import OdeResult
-from typing import Callable, Literal, Any
+from typing import Callable, Literal, Any, Optional
 from shapely.geometry import LineString, Point
 from numbers import Number
 from .typing import *
@@ -344,7 +344,6 @@ class NanowireNetwork(nx.Graph):
 
     def evolve(
         self,
-        state_vars: list[str],
         model: str | Callable,
         t_eval: npt.NDArray,
         source_node: NWNNode | list[NWNNode] = None,
@@ -352,6 +351,7 @@ class NanowireNetwork(nx.Graph):
         voltage_func: Callable[[npt.ArrayLike], npt.ArrayLike] = None,
         window_func: Callable[[npt.ArrayLike], npt.ArrayLike] = None,
         *,
+        state_vars: Optional[list[str]] = None,
         args: tuple[Any, ...] = (),
         solver: str = "spsolve",
         spsolve_kwargs: dict = {},
@@ -364,9 +364,6 @@ class NanowireNetwork(nx.Graph):
 
         Parameters
         ----------
-        state_vars : list of str
-            List of state variables to evolve.
-
         model : str or callable
             Model to use for the evolution. One of ["default", "decay", "chen"]
             can be chosen. If a function is given, it should have the calling
@@ -395,11 +392,14 @@ class NanowireNetwork(nx.Graph):
             signature `func(w)` where `w` is the state variable. Needed if you
             chose one of the built-in models listed in the `model` parameter.
 
+        state_vars : list of str, optional
+            List of state variables to evolve. If not provided, all
+            state variables in `self.state_vars` will be used.
+
         args : tuple, optional
             Additional arguments to pass to the model function. Most likely, 
             you will need to provide args for the source node(s), drain node(s) 
-            and voltage function. The start and end node indices would also be 
-            beneficial to provide for improved performance.
+            and voltage function.
 
         solver : str, optional
             Sparse matrix solver function name. Defaults to "spsolve".
@@ -423,6 +423,9 @@ class NanowireNetwork(nx.Graph):
             deriv = model
         else:
             raise NotImplementedError(f"Model '{model}' not found.")
+        
+        if state_vars is None:
+            state_vars = self.state_vars
 
         # Check if state variables are set
         if not all([self._state_vars_is_set[var] for var in state_vars]):
