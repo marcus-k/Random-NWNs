@@ -70,7 +70,7 @@ def test_new_api_evolution(NWN_input, voltage_func, window_func, request):
     NWN.set_state_var("w", 0.05)
 
     sol1 = NWN.evolve(
-        NWN.state_vars, "default", t_eval, source, drain, voltage_func,
+        "default", t_eval, source, drain, voltage_func,
         window_func, ivp_options={"rtol": 1e-7, "atol": 1e-7}
     )
 
