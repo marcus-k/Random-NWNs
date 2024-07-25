@@ -13,7 +13,7 @@ from shapely.geometry import LineString
 import networkx as nx
 
 from .line_functions import find_intersects
-from .units import get_units
+from .units import NWNUnits
 from .nanowire_network import NanowireNetwork
 
 def create_NWN_from_txt(
@@ -76,7 +76,7 @@ def create_NWN_from_txt(
     density = wire_num / size
 
     # Get characteristic units
-    units = get_units(units)
+    units = NWNUnits(units)
 
     # Create NWN graph
     NWN = NanowireNetwork(
