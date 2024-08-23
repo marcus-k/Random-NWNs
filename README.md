@@ -48,7 +48,14 @@ Nanowire network objects are simply [NetworkX](https://github.com/networkx/netwo
 >>> import randomnwn as rnwn
 >>> NWN = rnwn.create_NWN(seed=123)
 >>> NWN
-<networkx.classes.graph.Graph at 0x...>
+                Type: JDA
+               Wires: 750
+          Electrodes: 0
+Inner-wire junctions: None
+      Wire junctions: 3238
+              Length: 50.00 um (7.143 l0)
+               Width: 50.00 um (7.143 l0)
+        Wire Density: 0.3000 um^-2 (14.70 l0^-2)
 >>> rnwn.plot_NWN(NWN)
 (<Figure size 800x600 with 1 Axes>, <AxesSubplot:>)
 ```
