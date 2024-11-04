@@ -7,7 +7,7 @@
 # Date:   July 1, 2021
 
 
-class NWNUnits(dict):
+class NWNUnits:
     """
     Class for characteristic units for a nanowire network.
 
@@ -23,38 +23,67 @@ class NWNUnits(dict):
     
     """
     def __init__(self, new_units: dict[str, float] = None):
-        self.update(get_units(new_units))
-
         self.settable_units = (
             "v0", "Ron", "l0", "D0", "w0", "rho0", "mu0", "Roff_Ron"
         )
         self.not_settable_units = (
             "i0", "t0"
         )
+        self.default_units = {      # Unit, Description
+            "v0": 1.0,              # V, Voltage
+            "Ron": 10.0,            # Ω, ON junction resistance
+            "l0": 7.0,              # μm, Wire length
+            "D0": 50.0,             # nm, Wire diameter
+            "w0": 10.0,             # nm, Junction length (2x Wire coating thickness)
+            "rho0": 22.6,           # nΩm, Wire resistivity
+            "mu0": 1e-2,            # μm^2 s^-1 V^-1, Ion mobility
+            "Roff_Ron": 160         # none, Off-On Resistance ratio
+        }
+
+        self.units = self.default_units
+        self.update_derived_units()
+
+        if new_units is not None:
+            self.units = self.update(new_units)
 
     def __setitem__(self, key: str, value: float):
-
         if key in self.settable_units:
-            super().__setitem__(key, value)
+            self.units[key] = value
         elif key in self.not_settable_units:
             raise ValueError(f"Cannot set a derived unit: {key}")
         else:
             raise KeyError(f"Unknown unit {key}.")
             
-        # Derived units
-        super().__setitem__(
-            "i0", self["v0"] / self["Ron"]                      # A, Current
-        )      
-        super().__setitem__(
-            "t0", self["w0"]**2 / (self["mu0"] * self["v0"])    # μs, Time
-        )
+        self.update_derived_units()
+
+    def __getitem__(self, key: str):
+        return self.units[key]
+    
+    def update_derived_units(self):
+        # A, Current
+        self.units["i0"] = self.units["v0"] / self.units["Ron"] 
+        # μs, Time
+        self.units["t0"] = self.units["w0"]**2 / (self.units["mu0"] * self.units["v0"])
+    
+    def keys(self):
+        return self.units.keys()
+    
+    def values(self):
+        return self.units.values()
+    
+    def items(self):
+        return self.units.items()
+    
+    def update(self, new_units: dict[str, float]):
+        for key, value in new_units.items():
+            self[key] = value
         
     def __repr__(self) -> str:
         # Get max key length
-        m = max(map(len, list(self.keys())))
+        m = max(map(len, list(self.units.keys())))
 
         # Create string representation
-        s = "\n".join([f"{k:>{m}}: {v}" for k, v in self.items()])
+        s = "\n".join([f"{k:>{m}}: {v}" for k, v in self.units.items()])
         return s
         
 
