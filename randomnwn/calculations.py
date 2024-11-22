@@ -338,9 +338,9 @@ def solve_nodal_current(
     **kwargs
 ) -> npt.NDArray:
     """
-    Solve for the current through each node of a NWN. It will appear that
-    no current is flowing through source (drain) nodes for positive (negative)
-    voltages.
+    Solve for the current entering each node of a NWN. Only the entering
+    current is considered since by Kirchoff's law, the sum of currents
+    entering a node must equal the sum of currents leaving a node.
 
     Parameters
     ----------
@@ -365,8 +365,7 @@ def solve_nodal_current(
     Returns
     -------
     current_array : ndarray
-        Array containing the current flow through each drain node in the order
-        passed.
+        Array containing the current flow entering each node.
 
     """
     # Get nodal voltages
@@ -408,9 +407,8 @@ def solve_edge_current(
     **kwargs
 ) -> npt.NDArray:
     """
-    Solve for the current through each node of a NWN. It will appear that
-    no current is flowing through source (drain) nodes for positive (negative)
-    voltages.
+    Solve for the current passing through each edge of a NWN. The direction is
+    not considered, only the magnitude.
 
     Parameters
     ----------
