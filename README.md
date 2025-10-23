@@ -2,9 +2,7 @@
 
 Python package for modelling and analyzing random nanowire networks. This package was a summer research project lasting from May 2021 to August 2021 under the supervision of Dr. Claudia Gomes da Rocha. 
 
-**Update:** This project will now be continuing as of May 2024. If you are using this project, please note there will be **active development** on it and the functionality may change.
-
-For future additions, feel free to fork the repository. Please cite Marcus Kasdorf if you wish to extend the project.
+This repository is discontinued, to be replaced its successor with: [https://github.com/marcus-k/MemNNetSim](https://github.com/marcus-k/MemNNetSim)
 
 # Table of Contents
 * [Installation](#installation)
